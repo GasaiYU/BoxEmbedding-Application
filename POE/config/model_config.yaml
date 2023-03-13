@@ -1,2 +1,4 @@
 measure: uniform
 init_embedding_scale: random
+embed_dim: 100
+batch_size: 16
