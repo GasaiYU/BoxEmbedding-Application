@@ -5,7 +5,7 @@ from box_embeddings.parameterizations.box_tensor import BoxTensor
 from box_embeddings.modules.volume.volume import Volume
 from box_embeddings.modules.intersection import Intersection
 
-import utils
+import models.utils as utils
 
 def calc_join_and_meet(t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
     """
@@ -14,12 +14,12 @@ def calc_join_and_meet(t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
         join box, min box, and disjoint condition:
     """
     # join is min value of (a, c), max value of (b, d)
-    join_min, _ = torch.min(t1_min_embed, t2_min_embed) # batchsize * embed_size
-    join_max, _ = torch.max(t1_max_embed, t2_max_embed) # batchsize * embed_size
+    join_min = torch.min(t1_min_embed, t2_min_embed) # batchsize * embed_size
+    join_max = torch.max(t1_max_embed, t2_max_embed) # batchsize * embed_size
     
     # find meet is calculate the max value of (a,c), min value of (b,d)
-    meet_min, _ = torch.max(t1_min_embed, t2_min_embed) # batchsize * embed_size
-    meet_max, _ = torch.min(t1_max_embed, t2_max_embed) # batchsize * embed_size
+    meet_min = torch.max(t1_min_embed, t2_min_embed) # batchsize * embed_size
+    meet_max = torch.min(t1_max_embed, t2_max_embed) # batchsize * embed_size
     
     # The overlap cube's max value have to be bigger than min value in every dimension to form a valid cube
     # if it's not, then two concepts are disjoint, return none
@@ -40,8 +40,9 @@ def batch_log_prob(min_embed, max_embed):
 
 def smooth_prob(origin_prob):
     lambda_value = 1e-6
-    prob1 = torch.log(1 - lambda_value) + origin_prob # (batch_size)
-    prob2 = torch.stack([prob1, torch.zeros_like(prob1) + torch.log(lambda_value) + torch.log(0.5)], dim=1) # (batch_size, 2)
+    prob1 = torch.log(torch.tensor(1 - lambda_value).detach()) + origin_prob # (batch_size)
+    prob2 = torch.stack([prob1, torch.zeros_like(prob1) + torch.log(torch.tensor(lambda_value).detach()) \
+                         + torch.log(torch.tensor(0.5).detach())], dim=1) # (batch_size, 2)
     prob3 = torch.logsumexp(prob2, dim=1) # (batch_size)
     return prob3
     
@@ -91,7 +92,7 @@ def lambda_zero(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_emb
 
 """Overlap neg prob loss"""
 def lambda_batch_log_1minus_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
-    joint_log = batch_log_prob(join_min, join_max)
+    joint_log = batch_log_prob(meet_min, meet_max)
     domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
     cond_log = joint_log - domi_log
     neg_smooth_log_prob = -smooth_prob(cond_log)
