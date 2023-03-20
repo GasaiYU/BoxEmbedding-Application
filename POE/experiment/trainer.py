@@ -13,18 +13,20 @@ import warnings
 warnings.filterwarnings("ignore")
 
 BATCH_SIZE = 16
+VOCAB_SIZE = 82115
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def train_loop():
     dataloader = DataLoader(WNDataSet('/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/train.txt'), batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
     len_data = len(dataloader.dataset)
-    poe_model = torch_model(len_data, device).to(device)
+    poe_model = torch_model(VOCAB_SIZE, device).to(device)
+    poe_model.load_state_dict(torch.load('/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/experiment/ckpt.pth.tar'))
     optimizer = Adam(poe_model.parameters(), lr=1e-3)
     
     running_loss = last_loss = 0
     with open("log.txt", "w") as f:
-        for epoch in range(100):
+        for epoch in range(10):
             for i, (t1x, t2x, label) in enumerate(dataloader):
                 t1x.to(device)
                 t2x.to(device)
