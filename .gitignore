@@ -1,2 +1,5 @@
 # Dataset 
 POE/dataset/data/
+# log and checkpoint
+POE/experiment/log*
+POE/experiment/*tar
