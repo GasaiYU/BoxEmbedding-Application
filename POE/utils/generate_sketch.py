@@ -41,9 +41,11 @@ class SketchDataset(object):
         
     def get_imgs(self):
         all_color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-        
+        print(1)
         for i in range(self.num_tria):
             color = all_color[random.randint(0, 6)]
+            if i % 100:
+                print(f"Generate {i} images.")
             self.draw_triangle(color, i)
             
         for i in range(self.num_circles):
@@ -114,6 +116,6 @@ class SketchDataset(object):
             json.dump(self.triangle_labels, f)
 
 if __name__ == "__main__":
-    num_imgs = [50,50, 50]
+    num_imgs = [1000, 1000, 1000]
     dataset_drawer = SketchDataset(num_imgs)
     dataset_drawer.get_imgs()

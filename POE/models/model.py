@@ -35,7 +35,7 @@ class torch_model(nn.Module):
     def forward(self, x):
         t1x, t2x = x
         self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_word_embedding(t1x, t2x)
-        
+
         """calculate box stats, join, meet and overlap condition"""
         self.join_min, self.join_max, self.meet_min, self.meet_max, self.disjoint = unit_cube.calc_join_and_meet(
             self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed)

@@ -19,7 +19,6 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 def train_loop():
     dataloader = DataLoader(WNDataSet('/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/train.txt'), batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
-    len_data = len(dataloader.dataset)
     poe_model = torch_model(VOCAB_SIZE, device).to(device)
     poe_model.load_state_dict(torch.load('/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/experiment/ckpt.pth.tar'))
     optimizer = Adam(poe_model.parameters(), lr=1e-3)
@@ -30,7 +29,6 @@ def train_loop():
             for i, (t1x, t2x, label) in enumerate(dataloader):
                 t1x.to(device)
                 t2x.to(device)
-
                 train_pos_prob, train_neg_prob = poe_model.forward((t1x, t2x))
                 
                 train_pos_prob.to(device)
