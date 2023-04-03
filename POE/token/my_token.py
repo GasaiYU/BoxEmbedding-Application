@@ -7,12 +7,15 @@ import re
 
 import matplotlib.pyplot as plt
 
-BEGIN = 21
-END = 22
-SEMICOLON = 23
+import numpy as np
+
+MAX_TOKEN_LEN = 27
+
+
 SEED = 20010628
 COLOR_ARR = ['RED', "BLUE", 'GREEN', 'PURPLE', 'BLACK']
-COLOR = {'RED': 24, "BLUE": 25, "GREEN": 26, "PURPLE": 27, "BLACK": 28}
+SHAPE_ARR = ['Circle', 'Rectangle', 'Triangle']
+PAD = 32
 
 class Circle(object):
     """
@@ -31,20 +34,13 @@ class Circle(object):
         self.y = y
         self.radius = radius
         self.color = color
-    
-    def to_token(self):
-        x = ceil(self.x) + 9
-        y = ceil(self.y) + 9
-        radius = ceil(self.radius*2) - 1
-        color = COLOR[self.color]
-        return [x, y, radius, color, SEMICOLON]
 
     def __str__(self):
         x = ceil(self.x) + 9
         y = ceil(self.y) + 9
         radius = ceil(self.radius*2) - 1
         color = self.color
-        return f"<BEGIN>Circle({x}, {y}, {radius}); {color}<END>\n"
+        return f"<BEGIN> Circle({x}, {y}, {radius}); {color} <END>\n"
     
 class Line(object):
     """
@@ -62,13 +58,7 @@ class Line(object):
         self.x1 = x1
         self.y0 = y0
         self.y1 = y1  
-    
-    def to_token(self):
-        x0 = ceil(self.x0) + 9
-        y0 = ceil(self.y0) + 9
-        x1 = ceil(self.x1) + 9
-        y1 = ceil(self.y1) + 9
-        return [x0, y0, x1, y1, SEMICOLON]
+
     
     def __str__(self):
         x0 = ceil(self.x0) + 9
@@ -93,15 +83,6 @@ class Rectangle(object):
         self.line1, self.line2, self.line3, self.line4 = lines 
         self.color = color
     
-    def to_token(self):
-        res = []
-        res.extend(self.line1.to_token()[:-1])
-        res.extend(self.line2.to_token()[:-1])
-        res.extend(self.line3.to_token()[:-1])
-        res.extend(self.line4.to_token()[:-1])
-        res.append(COLOR[self.color])
-        res.append(SEMICOLON)
-        return res
     
     @classmethod
     def check_rectangle(cls, lines):
@@ -118,8 +99,8 @@ class Rectangle(object):
         assert line1_len == line3_len and line2_len == line4_len
     
     def __str__(self):
-        return f"<BEGIN>{str(self.line1)[:-1]}; {str(self.line2)[:-1]}; "+\
-                f"{str(self.line3)[:-1]}; {str(self.line4)[:-1]}; {self.color}<END>\n"
+        return f"<BEGIN> {str(self.line1)[:-1]}; {str(self.line2)[:-1]}; "+\
+                f"{str(self.line3)[:-1]}; {str(self.line4)[:-1]}; {self.color} <END>\n"
  
 class Triangle(object):
     """
@@ -131,16 +112,6 @@ class Triangle(object):
         self.line1, self.line2, self.line3 = lines
         self.color = color
 
-    def to_token(self):
-        res = []
-        res.extend(self.line1.to_token()[:-1])
-        res.extend(self.line2.to_token()[:-1])
-        res.extend(self.line3.to_token()[:-1])
-        res.append(COLOR[self.color])
-        res.append(SEMICOLON)
-    
-        return res
-    
 
     @classmethod
     def check_triangle(cls, lines):
@@ -156,8 +127,8 @@ class Triangle(object):
         pass
     
     def __str__(self):
-        return f"<BEGIN>{str(self.line1)[:-1]}; {str(self.line2)[:-1]}; " \
-                + f"{str(self.line3)[:-1]}; {self.color}<END>\n"
+        return f"<BEGIN> {str(self.line1)[:-1]}; {str(self.line2)[:-1]}; " \
+                + f"{str(self.line3)[:-1]}; {self.color} <END>\n"
     
     
 class TokenGenerator(object):
@@ -325,8 +296,91 @@ def visualize(config_dir, save_dir):
             plt.ylim(-10, 10)
             plt.savefig(f'../dataset/data/triangle/{i}.png')
             plt.close()        
-                  
-                              
+            
+def gen_token_dict(num_count):
+    token_dict = {}
+    for i in range(num_count):
+        token_dict[str(i)] = i
+    token_dict['<BEGIN>'] = 21
+    token_dict['<END>'] = 22
+    token_dict[','] = 23
+    token_dict[';'] = 24
+    token_dict['Circle']  = 25
+    token_dict['Line'] = 26
+    for i, color in enumerate(COLOR_ARR):
+        token_dict[color] = 27 + i
+    return token_dict 
+    
+def str_to_token(str_path, token_dict_path, save_path):
+    random.seed(SEED)
+    with open(token_dict_path, 'r') as f:
+        token_dict = json.load(f)
+      
+    token_res = []  
+    token_info = []
+    label_flag = []
+    with open(str_path, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            line = line.replace('(', " ")
+            line = line.replace(')', ' ')
+            line = line.replace(',', '')
+            line = line.replace('\n', '')
+            line_arr = line.split(' ')
+            line_res = []
+            line_info = []
+            line_count = 0
+            if False:
+                for e in line_arr:
+                    line_res.append(token_dict[e])
+                    if e == 'Line':
+                        line_count += 1
+                    if e == 'Circle' or e in COLOR_ARR:
+                        line_info.append(e)
+                    if line_count == 3 and len(line_info) == 0:
+                        line_info.append('Triangle')
+                    if line_count == 4:
+                        line_info[0] = 'Rectangle'
+                label_flag.append(True)
+            else:
+                for e in line_arr:
+                    line_res.append(token_dict[e])
+                    if e == 'Circle':
+                        if random.random() > 0.5:
+                            line_info.append('Triangle')
+                        else:
+                            line_info.append('Rectangle')
+                    if e in COLOR_ARR:
+                        e_idx = COLOR_ARR.index(e)
+                        color_idx = random.randint(0, len(COLOR_ARR)-1)
+                        while color_idx == e_idx:
+                            color_idx = random.randint(0, len(COLOR_ARR)-1)
+                        line_info.append(COLOR_ARR[color_idx])
+                    if e == 'Line':
+                        line_count += 1
+                    if line_count == 3 and len(line_info) == 0:
+                        if random.random() > 0.5:
+                            line_info.append('Circle')
+                        else:
+                            line_info.append('Rectangle')
+                    if line_count == 4:
+                        if random.random() > 0.5:
+                            line_info.append('Circle')
+                        else:
+                            line_info.append('Triangle')
+                label_flag.append(False)
+                    
+            for _ in range(MAX_TOKEN_LEN-len(line_res)):
+                line_res.append(PAD)
+            token_res.append(line_res)
+            token_info.append(line_info)
+
+    np.savetxt('../config/token_config/token.txt', token_res, fmt='%i')
+    with open('../config/token_config/token_info.txt', 'w') as f:
+        for i, info in enumerate(token_info):
+            f.write(f'{info[0]} {info[1]} {label_flag[i]}\n')
+    # with open('../config/token_config/token.txt', 'wb') as f:
+    #     np.save(f, np.asarray(token_res))
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, help='The path we save our config', \
@@ -336,14 +390,21 @@ if __name__ == "__main__":
     parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=500)
     parser.add_argument('--gen_cfg', type=bool, help='Whether we generate the config', default=False)
     parser.add_argument('--vis_save_dir', type=str, help='Where to save our visualization result.', default='../dataset/data')
+    parser.add_argument('--num_count', type=int, help='The range of the bin count from 0', default=20)
     args = parser.parse_args()
     
     if args.gen_cfg:    
         gen_config(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
         visualize(args.config_path, args.vis_save_dir)
     
-    token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
-    gen_str = str(token_gen)
-    with open(os.path.join(args.config_path, 'str.txt'), 'w') as f:
-        f.write(gen_str)
-    
+        token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
+        gen_str = str(token_gen)
+        with open(os.path.join(args.config_path, 'str.txt'), 'w') as f:
+            f.write(gen_str)
+        
+        token_dict = gen_token_dict(args.num_count)
+        with open(os.path.join(args.config_path, 'token_dict.json'), 'w') as f:
+                json.dump(token_dict, f)
+
+    str_to_token(os.path.join(args.config_path, 'str.txt'), os.path.join(args.config_path, 'token_dict.json'),
+            os.path.join(args.config_path, 'token.txt'))

@@ -10,8 +10,11 @@ from box_embeddings.modules.intersection import hard_intersection, gumbel_inters
 from box_embeddings.parameterizations.box_tensor import *
 
 from box_embeddings.modules.volume.volume import Volume
+from models.utils import visualization
 
 config_file = '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/model_config.yaml'
+
+SEED = 20210628
 
 class torch_model(nn.Module):
     def __init__(self, vocab_size, device, config=config_file):
@@ -33,9 +36,9 @@ class torch_model(nn.Module):
 
 
     def forward(self, x):
-        t1x, t2x = x
-        self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_word_embedding(t1x, t2x)
-
+        t1x, t2_embed1, t2_embed2 = x
+        self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_token_embedding(t1x, t2_embed1, t2_embed2)
+        # self.visualize_embedding(t1x)
         """calculate box stats, join, meet and overlap condition"""
         self.join_min, self.join_max, self.meet_min, self.meet_max, self.disjoint = unit_cube.calc_join_and_meet(
             self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed)
@@ -98,18 +101,53 @@ class torch_model(nn.Module):
         min_embed_var = self.min_higher_scale - min_embed_mean
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
-        
+
         t1_min_embed = self.min_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t1_delta_embed = self.delta_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean
+        t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean)
         t2_min_embed = self.min_embed(torch.tensor(t2_idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t2_delta_embed = self.delta_embed(torch.tensor(t2_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean
+        t2_delta_embed = torch.abs(self.delta_embed(torch.tensor(t2_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean)
 
         t1_max_embed = t1_min_embed + t1_delta_embed
         t2_max_embed = t2_min_embed + t2_delta_embed
         
         return t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed
+    
+    def get_token_embedding(self, idx, t2_embed1, t2_embed2):
+        min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
+        min_embed_var = self.min_higher_scale - min_embed_mean
+        delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
+        delta_embed_var = self.delta_higher_scale - delta_embed_mean
+        
+        t1_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
+        t1_delta_embed = F.softmax(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device)), dim=1) \
+                            * delta_embed_var + delta_embed_mean
 
+        t1_max_embed = t1_min_embed + t1_delta_embed
+        
+        if len(t2_embed1.shape) == 1:
+            t2_embed1.unsqueeze(0)
+            t2_embed2.unsqueeze(0)
+        
+        t2_min_embed = F.softmax(t2_embed1, dim=1) * min_embed_var + min_embed_mean
+        t2_delta_embed = F.softmax(t2_embed2, dim=1) * delta_embed_var + delta_embed_mean
+        t2_max_embed = t2_min_embed + t2_delta_embed
+        
+        return t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed
+    
+    def get_idx_embed(self, idx):
+        min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
+        min_embed_var = self.min_higher_scale - min_embed_mean
+        delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
+        delta_embed_var = self.delta_higher_scale - delta_embed_mean
+        
+        t1_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
+        t1_delta_embed = F.softmax(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device)), dim=1) \
+                            * delta_embed_var + delta_embed_mean
 
+        t1_max_embed = t1_min_embed + t1_delta_embed
+        return t1_min_embed, t1_max_embed
+    
+    
     def get_train_pos_prob(self):
         join_min = self.join_min.unsqueeze(1)
         join_max = self.join_max.unsqueeze(1)
@@ -121,6 +159,7 @@ class torch_model(nn.Module):
         t2_max_embed = self.t2_max_embed.unsqueeze(1)
         
         train_pos_prob = []
+        
         for i in range(self.disjoint.shape[0]):
             if self.disjoint[i]:
                 train_pos_prob.append(self.pos_disjoint_loss_func(
@@ -161,3 +200,18 @@ class torch_model(nn.Module):
                 ))
         res = torch.cat(train_neg_prob, dim=0)
         return res
+    
+    def visualize_embedding(self, t1x, other=True):
+        if other:
+            import random
+            random.seed(SEED)
+            idx = random.randint(0, self.vocab_size-1)
+            while idx == t1x[0]:
+                idx = random.randint(0, self.vocab_size-1)
+            t1x[0] = idx
+            embedding1, embedding2 = self.get_idx_embed(t1x)
+        else:
+            embedding1, embedding2 = self.t1_min_embed, self.t1_max_embed
+            
+        embedding3, embedding4 = self.t2_min_embed, self.t2_max_embed
+        visualization(embedding1, embedding2, embedding3, embedding4)

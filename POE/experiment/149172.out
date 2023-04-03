@@ -1,0 +1,43 @@
+Job start at 2023-04-03 15:34:31
+Job run at:
+   Static hostname: localhost.localdomain
+Transient hostname: gpu-t06
+         Icon name: computer-server
+           Chassis: server
+        Machine ID: 8b9045bbf8e747d3813b0751bbc12e7b
+           Boot ID: 059a9a52036441d4a2866fdd77fe0940
+  Operating System: CentOS Linux 7 (Core)
+       CPE OS Name: cpe:/o:centos:centos:7
+            Kernel: Linux 3.10.0-1127.13.1.el7.x86_64
+      Architecture: x86-64
+Have already added /tools/cluster-modulefiles into $MODULEPATH
+
+/usr/bin/gcc
+/lustre/S/gaomj/miniconda3/envs/bachelor/bin/python
+/tools/cluster-software/python3/python3-3.6.8/bin/python3
+############### /home : /home/S/gaomj
+Disk quotas for user gaomj (uid 6156): 
+     Filesystem   space   quota   limit   grace   files   quota   limit   grace
+          /home   4985M  16384M  20480M           24254       0       0        
+
+############### /workspace
+Disk quotas for user gaomj (uid 6156): 
+     Filesystem   space   quota   limit   grace   files   quota   limit   grace
+     /workspace      0K    400G    500G               1       0       0        
+
+############### /lustre
+Disk quotas for usr gaomj (uid 6156):
+     Filesystem    used   quota   limit   grace   files   quota   limit   grace
+        /lustre  9.707G      8T     10T       -  120633  3000000 36000000       -
+uid 6156 is using default block quota setting
+uid 6156 is using default file quota setting
+name, driver_version, power.limit [W]
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+Use GPU 0,1,2,3,4,5,6,7
