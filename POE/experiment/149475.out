@@ -1,4 +1,4 @@
-Job start at 2023-04-03 15:34:31
+Job start at 2023-04-04 17:25:31
 Job run at:
    Static hostname: localhost.localdomain
 Transient hostname: gpu-t06
@@ -18,7 +18,7 @@ Have already added /tools/cluster-modulefiles into $MODULEPATH
 ############### /home : /home/S/gaomj
 Disk quotas for user gaomj (uid 6156): 
      Filesystem   space   quota   limit   grace   files   quota   limit   grace
-          /home   4985M  16384M  20480M           24254       0       0        
+          /home   4986M  16384M  20480M           24285       0       0        
 
 ############### /workspace
 Disk quotas for user gaomj (uid 6156): 
@@ -28,7 +28,7 @@ Disk quotas for user gaomj (uid 6156):
 ############### /lustre
 Disk quotas for usr gaomj (uid 6156):
      Filesystem    used   quota   limit   grace   files   quota   limit   grace
-        /lustre  9.707G      8T     10T       -  120633  3000000 36000000       -
+        /lustre  9.892G      8T     10T       -  121188  3000000 36000000       -
 uid 6156 is using default block quota setting
 uid 6156 is using default file quota setting
 name, driver_version, power.limit [W]

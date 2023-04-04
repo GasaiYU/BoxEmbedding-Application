@@ -13,6 +13,10 @@ def log1mexp(input_a):
     
     
 def visualization(embedding1, embedding2, embedding3, embedding4, scale_fator=10):
+    embedding1 = embedding1.cpu()
+    embedding2 = embedding2.cpu()
+    embedding3 = embedding3.cpu()
+    embedding4 = embedding4.cpu()
     min_idx = torch.argmax(torch.abs(embedding1[0] - embedding3[0]))
     max_idx = torch.argmax(torch.abs(embedding2[0] - embedding4[0]))
     x1_min = embedding1[0][min_idx] * scale_fator
@@ -41,8 +45,7 @@ def visualization(embedding1, embedding2, embedding3, embedding4, scale_fator=10
     
     plt.axis('equal')
     plt.xlim(-1, 10)
-    plt.ylim(-1, 10)
-    breakpoint()
     plt.savefig(f'test.png')
+    # exit(0)
     pass
      

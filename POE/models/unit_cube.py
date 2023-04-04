@@ -7,6 +7,8 @@ from box_embeddings.modules.intersection import Intersection
 
 import models.utils as utils
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 def calc_join_and_meet(t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
     """
     # two box embeddings are t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed
@@ -50,9 +52,10 @@ def batch_log_uppper_bound_helper(join_min, join_max, meet_min, meet_max, t1_min
     # join_min: batchsize * embed_size
     # join_max: batchsize * embed_size
     # log_prob: batch_size
+    breakpoint()
     join_log_prob = batch_log_prob(join_min, join_max)
     join_log_prob_new = torch.logsumexp(torch.stack( \
-        [torch.zeros(join_log_prob.shape[0]).fill_(torch.log(0.1)), join_log_prob], dim=1), dim=1)
+        [torch.zeros(join_log_prob.shape[0]).fill_(torch.log(torch.tensor(0.1))).to(device), join_log_prob], dim=1), dim=1)
     x_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
     y_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
     log_xy = torch.logsumexp(torch.stack([x_log_prob, y_log_prob], dim=1), dim=1)
@@ -71,6 +74,7 @@ def lambda_batch_log_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, 
     cond_log = joint_log - domi_log # batch_size
     smooth_log_prob = smooth_prob(cond_log) # batch_size
     neg_smooth_log_prob = -smooth_log_prob # batch_size
+
     return neg_smooth_log_prob
 
 
@@ -96,8 +100,9 @@ def lambda_batch_log_1minus_prob(join_min, join_max, meet_min, meet_max, t1_min_
     domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
     cond_log = joint_log - domi_log
     neg_smooth_log_prob = -smooth_prob(cond_log)
-    
+
     onemp_neg_smooth_log_prob = -utils.log1mexp(neg_smooth_log_prob)
+
     return onemp_neg_smooth_log_prob
     
     

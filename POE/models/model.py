@@ -39,6 +39,8 @@ class torch_model(nn.Module):
         t1x, t2_embed1, t2_embed2 = x
         self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_token_embedding(t1x, t2_embed1, t2_embed2)
         # self.visualize_embedding(t1x)
+        # t1x, t2x = x
+        # self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_word_embedding(t1x, t2x)
         """calculate box stats, join, meet and overlap condition"""
         self.join_min, self.join_max, self.meet_min, self.meet_max, self.disjoint = unit_cube.calc_join_and_meet(
             self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed)
@@ -78,8 +80,8 @@ class torch_model(nn.Module):
             min_lower_scale, min_higher_scale = 0.0, 0.001
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
-            min_lower_scale, min_higher_scale = 1e-4, 1e-2
-            delta_lower_scale, delta_higher_scale = 0.9, 0.999
+            min_lower_scale, min_higher_scale = 1e-4, 1
+            delta_lower_scale, delta_higher_scale = 0.1, 9.9
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
@@ -119,7 +121,7 @@ class torch_model(nn.Module):
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
         t1_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t1_delta_embed = F.softmax(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device)), dim=1) \
+        t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) \
                             * delta_embed_var + delta_embed_mean
 
         t1_max_embed = t1_min_embed + t1_delta_embed
@@ -128,8 +130,8 @@ class torch_model(nn.Module):
             t2_embed1.unsqueeze(0)
             t2_embed2.unsqueeze(0)
         
-        t2_min_embed = F.softmax(t2_embed1, dim=1) * min_embed_var + min_embed_mean
-        t2_delta_embed = F.softmax(t2_embed2, dim=1) * delta_embed_var + delta_embed_mean
+        t2_min_embed = torch.abs(t2_embed1) * min_embed_var + min_embed_mean
+        t2_delta_embed = torch.abs(t2_embed2) * delta_embed_var + delta_embed_mean
         t2_max_embed = t2_min_embed + t2_delta_embed
         
         return t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed

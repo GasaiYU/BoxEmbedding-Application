@@ -18,7 +18,7 @@ TOKEN_INFO_PATH = '../config/token_config/token_info.txt'
 import warnings
 warnings.filterwarnings("ignore")
 
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 
@@ -30,7 +30,9 @@ def train_loop(model, dataloader, epoch_num, device):
     for epoch in range(epoch_num):
         if epoch % 5 == 0:
             eval_model(epoch, model, device)   
+        running_loss = 0
         for i, batch in enumerate(dataloader):
+
             x, label = batch
             x = x.to(device)
             
@@ -51,7 +53,6 @@ def train_loop(model, dataloader, epoch_num, device):
                     truth_label.append(0)
             
             truth_label = torch.tensor(truth_label).to(device)
-
             train_pos_prob_color, train_neg_prob_color, train_pos_prob_shape, train_neg_prob_shape \
                 = model(x, color_idx, shape_idx, truth_label)
                 
@@ -69,11 +70,12 @@ def train_loop(model, dataloader, epoch_num, device):
             
             running_loss += loss.item()
             
-        last_loss = running_loss / 1200
-        print(f"[Train] epoch {epoch} Loss {last_loss}")
-        with open("log_image_train.txt", "a") as f:
-            f.write(f"[Train] epoch {epoch} Loss {last_loss}\n")
-        running_loss = 0 
+            if i % 100 == 99:
+                last_loss = running_loss / 3200
+                print(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}")
+                with open("log_image_train.txt", "a") as f:
+                    f.write(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}\n")
+                running_loss = 0 
             
     torch.save(model.state_dict(), 'program_transform.pth.tar')
     
@@ -106,7 +108,7 @@ def eval_model(epoch, model, device):
             
             train_pos_prob_color, train_neg_prob_color, train_pos_prob_shape, train_neg_prob_shape \
                 = model(x, color_idx, shape_idx, truth_label)
-            
+
             pos_prob_color = torch.mul(train_pos_prob_color, truth_label)
             neg_prob_color = torch.mul(train_neg_prob_color, 1-truth_label)
             pos_prob_shape = torch.mul(train_pos_prob_shape, truth_label)
@@ -115,11 +117,12 @@ def eval_model(epoch, model, device):
             loss = torch.sum(pos_prob_color) + torch.sum(pos_prob_shape)\
                     + torch.sum(neg_prob_color) + torch.sum(neg_prob_shape)
                     
+                    
             running_loss += loss.item()
                 
-        print(f"[TEST] epoch {epoch} Loss {running_loss/300}")
+        print(f"[TEST] epoch {epoch} Loss {running_loss/19200}")
         with open("log_image_test.txt", "a") as f:
-            f.write(f"[TEST] epoch {epoch} Loss {running_loss/300}\n")
+            f.write(f"[TEST] epoch {epoch} Loss {running_loss/19200}\n")
 
     pass
     
@@ -130,7 +133,7 @@ if __name__ == "__main__":
                         dropout_p=0.1)
     box_embedding_model = torch_model(len(FEATURE_DICT.keys()), device)
     model = TokenBoxEmbeddingModel(encoder_model, box_embedding_model, device)
-    model.load_state_dict(torch.load('program_transform.pth.tar'))
+    # model.load_state_dict(torch.load('program_transform.pth.tar'))
     token_dataset = TokenDatesetTrain(TOKEN_PATH, TOKEN_INFO_PATH)
     dataloder = DataLoader(token_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
     with open('log_image_train.txt', 'r+') as f:
@@ -138,5 +141,5 @@ if __name__ == "__main__":
     with open('log_image_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 50, device)
+    train_loop(model, dataloder, 100, device)
     
