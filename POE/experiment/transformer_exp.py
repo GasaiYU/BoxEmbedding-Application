@@ -120,9 +120,9 @@ def eval_model(epoch, model, device):
                     
             running_loss += loss.item()
                 
-        print(f"[TEST] epoch {epoch} Loss {running_loss/19}")
+        print(f"[TEST] epoch {epoch} Loss {running_loss/6}")
         with open("log_image_test.txt", "a") as f:
-            f.write(f"[TEST] epoch {epoch} Loss {running_loss/19}\n")
+            f.write(f"[TEST] epoch {epoch} Loss {running_loss/6}\n")
 
     pass
     
