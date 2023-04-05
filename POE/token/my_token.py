@@ -349,10 +349,7 @@ def str_to_token(str_path, token_dict_path, save_path):
                     try:
                         p = int(e)
                     except ValueError:
-                        if e not in token_res:
-                            line_res.append(token_dict[e])
-                        else:
-                            continue
+                        line_res.append(token_dict[e])
                     if e == 'Circle':
                         if random.random() > 0.5:
                             line_info.append('Triangle')
@@ -373,17 +370,17 @@ def str_to_token(str_path, token_dict_path, save_path):
                             line_info.append('Rectangle')
                     if line_count == 4:
                         if random.random() > 0.5:
-                            line_info.append('Circle')
+                            line_info[0] = 'Circle'
                         else:
-                            line_info.append('Triangle')
+                            line_info[0] = 'Triangle'
                 flag = False
                     
             for _ in range(MAX_TOKEN_LEN-len(line_res)):
                 line_res.append(PAD)
-            # if line_info not in token_info:
-            token_res.append(line_res)
-            token_info.append(line_info)
-            label_flag.append(flag)
+            if (line_info, flag) not in zip(token_info, label_flag):
+                token_res.append(line_res)
+                token_info.append(line_info)
+                label_flag.append(flag)
 
     np.savetxt('../config/token_config/token.txt', token_res, fmt='%i')
     with open('../config/token_config/token_info.txt', 'w') as f:
