@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 PAD = 32
-BATCH_SIZE = 16
+BATCH_SIZE = 2
 
 FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 

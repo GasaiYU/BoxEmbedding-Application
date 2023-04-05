@@ -18,7 +18,7 @@ TOKEN_INFO_PATH = '../config/token_config/token_info.txt'
 import warnings
 warnings.filterwarnings("ignore")
 
-BATCH_SIZE = 16
+BATCH_SIZE = 2
 
 FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 
@@ -70,8 +70,8 @@ def train_loop(model, dataloader, epoch_num, device):
             
             running_loss += loss.item()
             
-            if i % 100 == 99:
-                last_loss = running_loss / 100
+            if i % 2 == 1:
+                last_loss = running_loss / 2
                 print(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}")
                 with open("log_image_train.txt", "a") as f:
                     f.write(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}\n")
@@ -120,9 +120,9 @@ def eval_model(epoch, model, device):
                     
             running_loss += loss.item()
                 
-        print(f"[TEST] epoch {epoch} Loss {running_loss/19200}")
+        print(f"[TEST] epoch {epoch} Loss {running_loss/19}")
         with open("log_image_test.txt", "a") as f:
-            f.write(f"[TEST] epoch {epoch} Loss {running_loss/19200}\n")
+            f.write(f"[TEST] epoch {epoch} Loss {running_loss/19}\n")
 
     pass
     
@@ -141,5 +141,5 @@ if __name__ == "__main__":
     with open('log_image_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 100, device)
+    train_loop(model, dataloder, 1000, device)
     

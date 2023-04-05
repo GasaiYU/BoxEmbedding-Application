@@ -33,7 +33,7 @@ def train_loop():
             
             train_pos_prob.to(device)
             train_neg_prob.to(device)
-            label = label.cuda()
+            # label = label.cuda()
             pos_prob = torch.mul(train_pos_prob, label)
             neg_prob = torch.mul(train_neg_prob, 1-label)
             loss = torch.sum(pos_prob) / (BATCH_SIZE / 2) + \

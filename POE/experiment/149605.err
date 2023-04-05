@@ -1,9 +1,0 @@
-Currently Loaded Modulefiles:
-  1) cluster-tools/v1.0   3) cmake/3.15.7         5) openssl/1.1.0g
-  2) slurm-tools/v1.0     4) git/2.17.1           6) vim/8.1.2424
-Currently Loaded Modulefiles:
-  1) cluster-tools/v1.0      5) openssl/1.1.0g
-  2) slurm-tools/v1.0        6) vim/8.1.2424
-  3) cmake/3.15.7            7) python3/3.6.8
-  4) git/2.17.1              8) cuda-cudnn/11.1-8.1.1
-AllenNLP not available. Registrable won't work.
