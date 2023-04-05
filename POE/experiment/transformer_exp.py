@@ -141,5 +141,5 @@ if __name__ == "__main__":
     with open('log_image_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 1000, device)
+    train_loop(model, dataloder, 200, device)
     
