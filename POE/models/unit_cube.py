@@ -52,7 +52,6 @@ def batch_log_uppper_bound_helper(join_min, join_max, meet_min, meet_max, t1_min
     # join_min: batchsize * embed_size
     # join_max: batchsize * embed_size
     # log_prob: batch_size
-    breakpoint()
     join_log_prob = batch_log_prob(join_min, join_max)
     join_log_prob_new = torch.logsumexp(torch.stack( \
         [torch.zeros(join_log_prob.shape[0]).fill_(torch.log(torch.tensor(0.1))).to(device), join_log_prob], dim=1), dim=1)

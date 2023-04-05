@@ -1,11 +1,11 @@
-Job start at 2023-04-04 17:25:31
+Job start at 2023-04-05 10:19:07
 Job run at:
    Static hostname: localhost.localdomain
-Transient hostname: gpu-t06
+Transient hostname: gpu-a09
          Icon name: computer-server
            Chassis: server
-        Machine ID: 8b9045bbf8e747d3813b0751bbc12e7b
-           Boot ID: 059a9a52036441d4a2866fdd77fe0940
+        Machine ID: b039fd1d01d748aea5d609e9d8ea533d
+           Boot ID: 1e96fdc6d68d43449fae575ec77ccf8f
   Operating System: CentOS Linux 7 (Core)
        CPE OS Name: cpe:/o:centos:centos:7
             Kernel: Linux 3.10.0-1127.13.1.el7.x86_64
@@ -13,12 +13,12 @@ Transient hostname: gpu-t06
 Have already added /tools/cluster-modulefiles into $MODULEPATH
 
 /usr/bin/gcc
-/lustre/S/gaomj/miniconda3/envs/bachelor/bin/python
+/lustre/S/gaomj/miniconda3/bin/python
 /tools/cluster-software/python3/python3-3.6.8/bin/python3
 ############### /home : /home/S/gaomj
 Disk quotas for user gaomj (uid 6156): 
      Filesystem   space   quota   limit   grace   files   quota   limit   grace
-          /home   4986M  16384M  20480M           24285       0       0        
+          /home   4986M  16384M  20480M           24316       0       0        
 
 ############### /workspace
 Disk quotas for user gaomj (uid 6156): 
@@ -28,16 +28,16 @@ Disk quotas for user gaomj (uid 6156):
 ############### /lustre
 Disk quotas for usr gaomj (uid 6156):
      Filesystem    used   quota   limit   grace   files   quota   limit   grace
-        /lustre  9.892G      8T     10T       -  121188  3000000 36000000       -
+        /lustre  9.893G      8T     10T       -  121207  3000000 36000000       -
 uid 6156 is using default block quota setting
 uid 6156 is using default file quota setting
 name, driver_version, power.limit [W]
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
-NVIDIA Quadro RTX 8000, 465.19.01, 200.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
+NVIDIA A100-SXM4-40GB, 465.19.01, 300.00 W
 Use GPU 0,1,2,3,4,5,6,7

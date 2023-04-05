@@ -329,9 +329,12 @@ def str_to_token(str_path, token_dict_path, save_path):
             line_res = []
             line_info = []
             line_count = 0
-            if False:
+            if i % 3 == 1:
                 for e in line_arr:
-                    line_res.append(token_dict[e])
+                    try:
+                        p = int(e)
+                    except ValueError:
+                        line_res.append(token_dict[e])
                     if e == 'Line':
                         line_count += 1
                     if e == 'Circle' or e in COLOR_ARR:
@@ -343,7 +346,10 @@ def str_to_token(str_path, token_dict_path, save_path):
                 label_flag.append(True)
             else:
                 for e in line_arr:
-                    line_res.append(token_dict[e])
+                    try:
+                        p = int(e)
+                    except ValueError:
+                        line_res.append(token_dict[e])
                     if e == 'Circle':
                         if random.random() > 0.5:
                             line_info.append('Triangle')
@@ -385,9 +391,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, help='The path we save our config', \
                         default='/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/token_config')
-    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=500)
-    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=500)
-    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=500)
+    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=32000)
+    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=32000)
+    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=32000)
     parser.add_argument('--gen_cfg', type=bool, help='Whether we generate the config', default=False)
     parser.add_argument('--vis_save_dir', type=str, help='Where to save our visualization result.', default='../dataset/data')
     parser.add_argument('--num_count', type=int, help='The range of the bin count from 0', default=20)
@@ -395,7 +401,7 @@ if __name__ == "__main__":
     
     if args.gen_cfg:    
         gen_config(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
-        visualize(args.config_path, args.vis_save_dir)
+        # visualize(args.config_path, args.vis_save_dir)
     
         token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
         gen_str = str(token_gen)

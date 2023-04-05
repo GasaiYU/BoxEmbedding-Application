@@ -18,7 +18,7 @@ TOKEN_INFO_PATH = '../config/token_config/token_info.txt'
 import warnings
 warnings.filterwarnings("ignore")
 
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 
 FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 
@@ -61,8 +61,8 @@ def train_loop(model, dataloader, epoch_num, device):
             pos_prob_shape = torch.mul(train_pos_prob_shape, truth_label)
             neg_prob_shape = torch.mul(train_neg_prob_shape, 1-truth_label)
             
-            loss = torch.sum(pos_prob_color) + torch.sum(pos_prob_shape)\
-                    + torch.sum(neg_prob_color) + torch.sum(neg_prob_shape)
+            loss = torch.sum(pos_prob_color) / (BATCH_SIZE) + torch.sum(pos_prob_shape) / (BATCH_SIZE)\
+                    + torch.sum(neg_prob_color) / (BATCH_SIZE) + torch.sum(neg_prob_shape) / (BATCH_SIZE)
 
             optimizer.zero_grad()
             loss.backward()
@@ -71,7 +71,7 @@ def train_loop(model, dataloader, epoch_num, device):
             running_loss += loss.item()
             
             if i % 100 == 99:
-                last_loss = running_loss / 3200
+                last_loss = running_loss / 100
                 print(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}")
                 with open("log_image_train.txt", "a") as f:
                     f.write(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}\n")
@@ -129,7 +129,7 @@ def eval_model(epoch, model, device):
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_model = TransformerEncoder(num_tokens=35, dim_model=512, num_heads=8, num_encoder_layers=6, \
+    encoder_model = TransformerEncoder(num_tokens=35, dim_model=64, num_heads=8, num_encoder_layers=6, \
                         dropout_p=0.1)
     box_embedding_model = torch_model(len(FEATURE_DICT.keys()), device)
     model = TokenBoxEmbeddingModel(encoder_model, box_embedding_model, device)
