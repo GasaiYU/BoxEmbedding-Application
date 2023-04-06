@@ -37,6 +37,7 @@ class TokenDatesetTest(Dataset):
                     break
                 line = line.replace('\n', '')
                 line_arr = line.split(' ')
+                line_arr.append(i)
                 token_info.append(line_arr)
         self.token_info = token_info
     

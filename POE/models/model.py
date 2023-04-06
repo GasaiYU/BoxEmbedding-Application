@@ -10,7 +10,7 @@ from box_embeddings.modules.intersection import hard_intersection, gumbel_inters
 from box_embeddings.parameterizations.box_tensor import *
 
 from box_embeddings.modules.volume.volume import Volume
-from models.utils import visualization
+from models.utils import visualization, vis_all, shape_color_embed
 
 config_file = '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/model_config.yaml'
 
@@ -80,7 +80,7 @@ class torch_model(nn.Module):
             min_lower_scale, min_higher_scale = 0.0, 0.001
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
-            min_lower_scale, min_higher_scale = 1e-4, 1e-2
+            min_lower_scale, min_higher_scale = 1e-4, 5
             delta_lower_scale, delta_higher_scale = 0.1, 9.9
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
@@ -143,11 +143,11 @@ class torch_model(nn.Module):
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
         t1_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t1_delta_embed = F.softmax(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device)), dim=1) \
+        t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) \
                             * delta_embed_var + delta_embed_mean
 
         t1_max_embed = t1_min_embed + t1_delta_embed
-        return t1_min_embed, t1_max_embed
+        return t1_min_embed, t1_delta_embed
     
     
     def get_train_pos_prob(self):
@@ -203,7 +203,7 @@ class torch_model(nn.Module):
         res = torch.cat(train_neg_prob, dim=0)
         return res
     
-    def visualize_embedding(self, t1x, other=True):
+    def visualize_embedding(self, t1x, other=False):
         if other:
             import random
             random.seed(SEED)
@@ -216,4 +216,22 @@ class torch_model(nn.Module):
             embedding1, embedding2 = self.t1_min_embed, self.t1_max_embed
             
         embedding3, embedding4 = self.t2_min_embed, self.t2_max_embed
-        visualization(embedding1, embedding2, embedding3, embedding4)
+        min_embeddings, delta_embeddings = [], []
+        for i in range(8):
+            min_embeddings.append(self.get_idx_embed(i)[0])
+            delta_embeddings.append(self.get_idx_embed(i)[1])
+        vis_all(min_embeddings, delta_embeddings)
+        
+    def visual_shape_color_embedding(self, t1x, t2x, x1, x2, count, label):
+        min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
+        min_embed_var = self.min_higher_scale - min_embed_mean
+        delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
+        delta_embed_var = self.delta_higher_scale - delta_embed_mean
+        
+        embedding1, embedding2 = self.get_idx_embed(t1x)
+        embedding3, embedding4 = self.get_idx_embed(t2x)
+        
+        embedding5 = torch.abs(x1) * min_embed_var + min_embed_mean
+        embedding6 = torch.abs(x2) * delta_embed_var + delta_embed_mean
+        
+        shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], count, label)

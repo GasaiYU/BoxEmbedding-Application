@@ -129,11 +129,11 @@ def eval_model(epoch, model, device):
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_model = TransformerEncoder(num_tokens=35, dim_model=64, num_heads=8, num_encoder_layers=6, \
+    encoder_model = TransformerEncoder(num_tokens=35, dim_model=4, num_heads=2, num_encoder_layers=6, \
                         dropout_p=0.1)
-    box_embedding_model = torch_model(len(FEATURE_DICT.keys()), device)
+    box_embedding_model = torch_model(len(FEATURE_DICT.keys())+30, device)
     model = TokenBoxEmbeddingModel(encoder_model, box_embedding_model, device)
-    # model.load_state_dict(torch.load('program_transform.pth.tar'))
+    model.load_state_dict(torch.load('program_transform.pth.tar'))
     token_dataset = TokenDatesetTrain(TOKEN_PATH, TOKEN_INFO_PATH)
     dataloder = DataLoader(token_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
     with open('log_image_train.txt', 'r+') as f:
@@ -141,5 +141,5 @@ if __name__ == "__main__":
     with open('log_image_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 200, device)
+    train_loop(model, dataloder, 300, device)
     
