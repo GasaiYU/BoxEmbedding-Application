@@ -73,35 +73,53 @@ def lambda_batch_log_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, 
     cond_log = joint_log - domi_log # batch_size
     smooth_log_prob = smooth_prob(cond_log) # batch_size
     neg_smooth_log_prob = -smooth_log_prob # batch_size
-
-    return neg_smooth_log_prob
+    loss = torch.sigmoid(neg_smooth_log_prob)
+    return loss
 
 
 """Disjoint pos prob loss"""
-    # this function return the upper bound log(p(a join b) + log(0.01) - p(a) - p(b)) of positive examplse if they are disjoint
+    # this function return the upper bound log(p(a join b) + 0.01 - p(a) - p(b)) of positive examplse if they are disjoint
 def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
     # minus the log probability of the condionaled term
     # we want to minimize the return value too
-    joint_log = batch_log_uppper_bound_helper(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed)
-    domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
-    cond_log = joint_log - domi_log  # (batch_size)
+    # joint_log = batch_log_uppper_bound_helper(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed)
+    # domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
+    # cond_log = joint_log - domi_log  # (batch_size)
+    joint_log_prob = batch_log_prob(join_min, join_max)
+    joint_prob = torch.exp(joint_log_prob)
+    a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
+    a_prob = torch.exp(a_log_prob)
+    b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
+    b_prob = torch.exp(b_log_prob)
+    
+    cond_log = torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
+    cond_loss = torch.sigmoid(cond_loss)
     return cond_log
     
 
 """Disjoint neg prob loss"""
 def lambda_zero(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
-    result = torch.zeros_like(torch.sum(join_min, dim=1))
-    return result
+    joint_log_prob = batch_log_prob(join_min, join_max)
+    joint_prob = torch.exp(joint_log_prob)
+    a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
+    a_prob = torch.exp(a_log_prob)
+    b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
+    b_prob = torch.exp(b_log_prob)
+    
+    cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
+    cond_loss = torch.sigmoid(cond_loss)
+    return cond_loss
 
 """Overlap neg prob loss"""
 def lambda_batch_log_1minus_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
-    joint_log = batch_log_prob(meet_min, meet_max)
+    meet_log = batch_log_prob(meet_min, meet_max)
     domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
-    cond_log = joint_log - domi_log
-    neg_smooth_log_prob = -smooth_prob(cond_log)
+    cond_log = meet_log - domi_log
+    # neg_smooth_log_prob = -smooth_prob(cond_log)
 
-    onemp_neg_smooth_log_prob = -utils.log1mexp(neg_smooth_log_prob)
-
-    return onemp_neg_smooth_log_prob
+    # onemp_neg_smooth_log_prob = -utils.log1mexp(neg_smooth_log_prob)
+    neg_smooth_log_prob = smooth_prob(cond_log)
+    loss = torch.sigmoid(neg_smooth_log_prob)
+    return loss
     
     

@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 PAD = 32
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 
 FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 
@@ -126,10 +126,9 @@ class TokenBoxEmbeddingModel(nn.Module):
         super().__init__()
         self.transformer_encoder = transformer_encoder.to(device)
         self.box_embedding_model = box_embedding_model.to(device)
-        self.count = 0
         pass
     
-    def forward(self, x, color_idx, shape_idx, label):
+    def forward(self, x, color_idx, shape_idx, label, idx, epoch, i):
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
         encoder_out = self.transformer_encoder(x, src_padding_mask)
         # change (S, N, E) -> (N, S, E)
@@ -137,10 +136,10 @@ class TokenBoxEmbeddingModel(nn.Module):
         box_embedding_vector = encoder_out[:, 0, :]
     
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
-        pos_prob_color, neg_prob_color = self.box_embedding_model((color_idx, x1, x2))
-        pos_prob_shape, neg_prob_shape = self.box_embedding_model((shape_idx, x1, x2))
-        self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], self.count, label[0])
-        self.count += 1
+        pos_prob_color, neg_prob_color = self.box_embedding_model((idx, color_idx))
+        pos_prob_shape, neg_prob_shape = self.box_embedding_model((idx, shape_idx))
+        if label[0] == 1:
+            self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], idx[0], epoch, i, label[0])
         return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape       
     
     @staticmethod

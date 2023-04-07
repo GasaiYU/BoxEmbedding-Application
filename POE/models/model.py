@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parameter import Parameter
 
 import yaml
 from torch.autograd import Variable
@@ -17,10 +18,11 @@ config_file = '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/mode
 SEED = 20210628
 
 class torch_model(nn.Module):
-    def __init__(self, vocab_size, device, config=config_file):
+    def __init__(self, vocab_size, device, config=config_file, feature_size=8):
         super(torch_model, self).__init__()
         self.config = config
         self.device = device
+        self.feature_size = feature_size
         
         with open(config) as f:
             cfg = yaml.safe_load(f)
@@ -36,15 +38,16 @@ class torch_model(nn.Module):
 
 
     def forward(self, x):
-        t1x, t2_embed1, t2_embed2 = x
-        self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_token_embedding(t1x, t2_embed1, t2_embed2)
+        # t1x, t2_embed1, t2_embed2 = x
+        # self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_token_embedding(t1x, t2_embed1, t2_embed2)
         # self.visualize_embedding(t1x)
-        # t1x, t2x = x
-        # self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_word_embedding(t1x, t2x)
+        t1x, t2x = x
+        # breakpoint()
+        self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed = self.get_word_embedding(t1x, t2x)
         """calculate box stats, join, meet and overlap condition"""
         self.join_min, self.join_max, self.meet_min, self.meet_max, self.disjoint = unit_cube.calc_join_and_meet(
             self.t1_min_embed, self.t1_max_embed, self.t2_min_embed, self.t2_max_embed)
-        
+
         self.pos_disjoint_loss_func = unit_cube.lambda_batch_log_upper_bound
         self.pos_overlap_loss_func = unit_cube.lambda_batch_log_prob
         
@@ -80,8 +83,8 @@ class torch_model(nn.Module):
             min_lower_scale, min_higher_scale = 0.0, 0.001
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
-            min_lower_scale, min_higher_scale = 1e-4, 5
-            delta_lower_scale, delta_higher_scale = 0.1, 9.9
+            min_lower_scale, min_higher_scale = -1, 5
+            delta_lower_scale, delta_higher_scale = 0.1, 5
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
@@ -92,6 +95,12 @@ class torch_model(nn.Module):
             # random init word embedding
             self.min_embed = nn.Embedding(self.vocab_size, self.embed_dim)
             self.delta_embed = nn.Embedding(self.vocab_size, self.embed_dim)
+            self.min_feature_embed = nn.Embedding(self.feature_size, self.embed_dim)
+            self.min_feature_embed.weight = Parameter(torch.tensor([[1.0, 1.0], [1.0, 4.0], [1.0, 8.0], \
+                                                          [1.1, 0.9], [3.1, 0.9], [5.1, 0.9], [7.1, 0.9], [9.1, 0.9]]), requires_grad=False)
+            self.delta_feature_embed = nn.Embedding(self.feature_size, self.embed_dim)
+            self.delta_feature_embed.weight = Parameter(torch.tensor([[10.0, 2.0], [10.0, 2.0], [10.0, 2.0], \
+                                                            [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5]]), requires_grad=False)
         else:
             raise NotImplementedError("Not Implemented Embedding Method.")
         
@@ -105,9 +114,9 @@ class torch_model(nn.Module):
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
 
         t1_min_embed = self.min_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean)
-        t2_min_embed = self.min_embed(torch.tensor(t2_idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t2_delta_embed = torch.abs(self.delta_embed(torch.tensor(t2_idx).clone().detach().to(self.device)) * delta_embed_var + delta_embed_mean)
+        t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(t1_idx).clone().detach().to(self.device))) * delta_embed_var + delta_embed_mean
+        t2_min_embed = self.min_feature_embed(torch.tensor(t2_idx).clone().detach().to(self.device))
+        t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(t2_idx).clone().detach().to(self.device)))
 
         t1_max_embed = t1_min_embed + t1_delta_embed
         t2_max_embed = t2_min_embed + t2_delta_embed
@@ -146,7 +155,12 @@ class torch_model(nn.Module):
         t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) \
                             * delta_embed_var + delta_embed_mean
 
-        t1_max_embed = t1_min_embed + t1_delta_embed
+        return t1_min_embed, t1_delta_embed
+
+    def get_freeze_idx_embed(self, idx):
+        t1_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
+        t1_delta_embed = self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
+        
         return t1_min_embed, t1_delta_embed
     
     
@@ -222,16 +236,15 @@ class torch_model(nn.Module):
             delta_embeddings.append(self.get_idx_embed(i)[1])
         vis_all(min_embeddings, delta_embeddings)
         
-    def visual_shape_color_embedding(self, t1x, t2x, x1, x2, count, label):
+    def visual_shape_color_embedding(self, t1x, t2x, t3x, epoch, i, label):
+        # breakpoint()
         min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
         min_embed_var = self.min_higher_scale - min_embed_mean
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        embedding1, embedding2 = self.get_idx_embed(t1x)
-        embedding3, embedding4 = self.get_idx_embed(t2x)
+        embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
+        embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
+        embedding5, embedding6 = self.get_idx_embed(t3x)
         
-        embedding5 = torch.abs(x1) * min_embed_var + min_embed_mean
-        embedding6 = torch.abs(x2) * delta_embed_var + delta_embed_mean
-        
-        shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], count, label)
+        shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], epoch, i, label)

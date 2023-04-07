@@ -72,27 +72,28 @@ def vis_all(min_embeddings, delta_embeddings):
     exit(0)
     pass
 
-def shape_color_embed(shape_embeddings, color_embeddings, x_embeddings, count, label):
+def shape_color_embed(color_embeddings, shape_embeddings, x_embeddings, epoch, i, label):
+    # breakpoint()
     shape_min_embedding, shape_delta_embedding = shape_embeddings
     color_min_embedding, color_delta_embedding = color_embeddings
     x_min_embedding, x_delta_embedding =  x_embeddings
     
     fig = plt.figure(figsize=(5, 5))
-    shape_min_embedding = shape_min_embedding.detach().cpu()
-    shape_delta_embedding = shape_delta_embedding.detach().cpu()
+    shape_min_embedding = shape_min_embedding.clone().detach().cpu()
+    shape_delta_embedding = shape_delta_embedding.clone().detach().cpu()
     rect = plt.Rectangle((shape_min_embedding[0], shape_min_embedding[1]), shape_delta_embedding[0], \
                          shape_delta_embedding[1], color='r')
     plt.gcf().gca().add_artist(rect)
     
     
-    color_min_embedding = color_min_embedding.detach().cpu()
-    color_delta_embedding = color_delta_embedding.detach().cpu()
+    color_min_embedding = color_min_embedding.clone().detach().cpu()
+    color_delta_embedding = color_delta_embedding.clone().detach().cpu()
     rect = plt.Rectangle((color_min_embedding[0], color_min_embedding[1]), color_delta_embedding[0], \
                          color_delta_embedding[1], color='g')
     plt.gcf().gca().add_artist(rect)
     
-    x_min_embedding = x_min_embedding.detach().cpu()
-    x_delta_embedding = x_delta_embedding.detach().cpu()
+    x_min_embedding = x_min_embedding.clone().detach().cpu()
+    x_delta_embedding = x_delta_embedding.clone().detach().cpu()
     # breakpoint()
     rect = plt.Rectangle((x_min_embedding[0], x_min_embedding[1]), x_delta_embedding[0], \
                          x_delta_embedding[1], color='b')
@@ -101,7 +102,7 @@ def shape_color_embed(shape_embeddings, color_embeddings, x_embeddings, count, l
     plt.axis('equal')
     plt.xlim(-10, 15)
     plt.ylim(-10, 15)
-    plt.savefig(f'./image_res/{count}_{label}.png')
+    plt.savefig(f'./image_res/{epoch}_{i}_{label}.png')
     plt.close()
     # exit(0)
     pass
