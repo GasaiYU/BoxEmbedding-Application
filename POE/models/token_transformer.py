@@ -138,7 +138,7 @@ class TokenBoxEmbeddingModel(nn.Module):
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
         pos_prob_color, neg_prob_color = self.box_embedding_model((idx, color_idx))
         pos_prob_shape, neg_prob_shape = self.box_embedding_model((idx, shape_idx))
-        if label[0] == 1:
+        if label[0] == 0:
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], idx[0], epoch, i, label[0])
         return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape       
     

@@ -93,8 +93,8 @@ def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_
     b_prob = torch.exp(b_log_prob)
     
     cond_log = torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    cond_loss = torch.sigmoid(cond_loss)
-    return cond_log
+    cond_loss = torch.sigmoid(cond_log)
+    return cond_loss
     
 
 """Disjoint neg prob loss"""
@@ -107,7 +107,7 @@ def lambda_zero(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_emb
     b_prob = torch.exp(b_log_prob)
     
     cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    cond_loss = torch.sigmoid(cond_loss)
+    cond_loss = torch.sigmoid(cond_log)
     return cond_loss
 
 """Overlap neg prob loss"""

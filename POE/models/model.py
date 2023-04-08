@@ -83,8 +83,8 @@ class torch_model(nn.Module):
             min_lower_scale, min_higher_scale = 0.0, 0.001
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
-            min_lower_scale, min_higher_scale = -1, 5
-            delta_lower_scale, delta_higher_scale = 0.1, 5
+            min_lower_scale, min_higher_scale = -1, 10
+            delta_lower_scale, delta_higher_scale = 0.1, 2
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
@@ -112,7 +112,7 @@ class torch_model(nn.Module):
         min_embed_var = self.min_higher_scale - min_embed_mean
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
-
+        # breakpoint()
         t1_min_embed = self.min_embed(torch.tensor(t1_idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
         t1_delta_embed = torch.abs(self.delta_embed(torch.tensor(t1_idx).clone().detach().to(self.device))) * delta_embed_var + delta_embed_mean
         t2_min_embed = self.min_feature_embed(torch.tensor(t2_idx).clone().detach().to(self.device))
