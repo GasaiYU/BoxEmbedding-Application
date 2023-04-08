@@ -58,7 +58,7 @@ def train_loop(model, dataloader, epoch_num, device):
             
             truth_label = torch.tensor(truth_label).to(device)
             train_pos_prob_color, train_neg_prob_color, train_pos_prob_shape, train_neg_prob_shape \
-                = model(x, color_idx, shape_idx, truth_label, idx, epoch, i)
+                = model(x, color_idx, shape_idx, [truth_label, shape_idx, color_idx], idx, epoch, i)
                 
             pos_prob_color = torch.mul(train_pos_prob_color, truth_label)
             neg_prob_color = torch.mul(train_neg_prob_color, 1-truth_label)
@@ -112,7 +112,7 @@ def eval_model(epoch, model, device):
             truth_label = torch.tensor(truth_label).to(device)
             
             train_pos_prob_color, train_neg_prob_color, train_pos_prob_shape, train_neg_prob_shape \
-                = model(x, color_idx, shape_idx, truth_label)
+                = model(x, color_idx, shape_idx)
 
             pos_prob_color = torch.mul(train_pos_prob_color, truth_label)
             neg_prob_color = torch.mul(train_neg_prob_color, 1-truth_label)
@@ -134,11 +134,11 @@ def eval_model(epoch, model, device):
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_model = TransformerEncoder(num_tokens=35, dim_model=4, num_heads=2, num_encoder_layers=6, \
+    encoder_model = TransformerEncoder(num_tokens=35, dim_model=4, num_heads=2, num_encoder_layers=2, \
                         dropout_p=0.1)
     box_embedding_model = torch_model(30, device, feature_size=len(FEATURE_DICT.keys()))
     model = TokenBoxEmbeddingModel(encoder_model, box_embedding_model, device)
-    model.load_state_dict(torch.load('program_transform.pth.tar'))
+    # model.load_state_dict(torch.load('program_transform.pth.tar'))
     token_dataset = TokenDatesetTrain(TOKEN_PATH, TOKEN_INFO_PATH)
     dataloder = DataLoader(token_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
     with open('log_image_train.txt', 'r+') as f:
@@ -146,5 +146,5 @@ if __name__ == "__main__":
     with open('log_image_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 1, device)
+    train_loop(model, dataloder, 300, device)
     
