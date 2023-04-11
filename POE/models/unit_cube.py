@@ -73,7 +73,7 @@ def lambda_batch_log_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, 
     cond_log = joint_log - domi_log # batch_size
     smooth_log_prob = smooth_prob(cond_log) # batch_size
     neg_smooth_log_prob = -smooth_log_prob # batch_size
-    loss = torch.sigmoid(neg_smooth_log_prob)
+    loss = torch.sigmoid(neg_smooth_log_prob) - 0.5
     return loss
 
 
@@ -85,6 +85,7 @@ def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_
     # joint_log = batch_log_uppper_bound_helper(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed)
     # domi_log = batch_log_prob(t1_min_embed, t1_max_embed)
     # cond_log = joint_log - domi_log  # (batch_size)
+
     joint_log_prob = batch_log_prob(join_min, join_max)
     joint_prob = torch.exp(joint_log_prob)
     a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
@@ -93,7 +94,7 @@ def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_
     b_prob = torch.exp(b_log_prob)
     
     cond_log = torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    cond_loss = torch.sigmoid(cond_log)
+    cond_loss = torch.sigmoid(cond_log) - 0.5
     return cond_loss
     
 

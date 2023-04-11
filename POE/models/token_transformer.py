@@ -100,18 +100,17 @@ class TransformerEncoder(nn.Module):
         self.positional_encoder = PositionalEncoding(dim_model=dim_model, dropout_p=dropout_p, max_len=5000)
         self.embedding = nn.Embedding(num_tokens, dim_model)
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=dim_model,
-                                                                    nhead=num_heads,
-                                                                    dropout=dropout_p)
+                                                                nhead=num_heads,
+                                                                dropout=dropout_p)
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=num_encoder_layers)
 
     def forward(self, src, src_pad_mask=None):
         # Src size must be (batch_size, src sequence length, dim_model)
         src = self.embedding(src) * math.sqrt(self.dim_model)
         src = self.positional_encoder(src)
-        
+
         # to convert to shape (sequence length, batch_size, dim_model)
         src = src.permute(1, 0, 2)
-        
         # encoder. Out size: (sequence length, batch_size, dim_model)
         out = self.transformer_encoder(src, src_key_padding_mask=src_pad_mask)
         
@@ -121,26 +120,32 @@ class TransformerEncoder(nn.Module):
     def create_pad_mask(matrix, pad_token=PAD):
         return (matrix == pad_token)
     
+    
 class TokenBoxEmbeddingModel(nn.Module):
-    def __init__(self, transformer_encoder, box_embedding_model, device):
+    def __init__(self, transformer_encoder, box_embedding_model, device, token_len, embed_dim):
         super().__init__()
         self.transformer_encoder = transformer_encoder.to(device)
         self.box_embedding_model = box_embedding_model.to(device)
+        self.linear = nn.Linear(in_features=token_len*embed_dim, out_features=embed_dim)
+        self.relu = nn.LeakyReLU()
         pass
     
     def forward(self, x, color_idx, shape_idx, label, idx, epoch, i):
+
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
-        encoder_out = self.transformer_encoder(x, src_padding_mask)
+        encoder_out = self.transformer_encoder(x, src_pad_mask=src_padding_mask)
+ 
         # change (S, N, E) -> (N, S, E)
         encoder_out = encoder_out.permute(1,0,2)
         box_embedding_vector = encoder_out[:, 0, :]
-    
+            
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
-        pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
-        pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
-        # breakpoint()
         if label[0][0] == 1: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
+            
+        pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
+        pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
+
         return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape       
     
     @staticmethod
@@ -149,3 +154,50 @@ class TokenBoxEmbeddingModel(nn.Module):
             x.unsqueeze(0)
         dim1 = x.shape[1] // 2
         return x[:, :dim1], x[:, dim1:]
+    
+    
+class SimpleTransformerEncoder(nn.Module):
+    def __init__(self, num_tokens, dim_model):
+        super().__init__()
+        
+        self.model_name = "Simple Transformer Encoder"
+        self.dim_model = dim_model
+        # Layers
+        self.embedding = nn.Embedding(num_tokens, dim_model)
+
+    def forward(self, src, src_pad_mask=None):
+        # Src size must be (batch_size, src sequence length, dim_model)
+        src = self.embedding(src)
+        
+        for e in src_pad_mask.nonzero():
+            src[e[0], e[1], :] = 0.0
+        out = src
+        return out
+    
+
+class SimpleTokenBoxEmbeddingModel(nn.Module):
+    def __init__(self, transformer_encoder, box_embedding_model, device, token_len, embed_dim):
+        super().__init__()
+        self.transformer_encoder = transformer_encoder.to(device)
+        self.box_embedding_model = box_embedding_model.to(device)
+        self.linear = nn.Linear(in_features=token_len*embed_dim, out_features=embed_dim)
+        self.relu = nn.LeakyReLU()
+        
+    def forward(self, x, color_idx, shape_idx, label, idx, epoch, i):
+        src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
+        encoder_out = self.transformer_encoder(x, src_pad_mask=src_padding_mask)
+        
+        batch_size = encoder_out.shape[0]
+        encoder_out = encoder_out.reshape(batch_size, -1)
+        box_embedding_vector = self.linear(encoder_out)
+        
+        x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
+        if label[0][0] == 1: 
+            self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
+            
+        pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
+        pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
+
+
+        return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape  
+        

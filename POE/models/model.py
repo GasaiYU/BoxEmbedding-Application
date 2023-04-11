@@ -50,7 +50,7 @@ class torch_model(nn.Module):
 
         self.pos_disjoint_loss_func = unit_cube.lambda_batch_log_upper_bound
         self.pos_overlap_loss_func = unit_cube.lambda_batch_log_prob
-        
+
         self.train_pos_prob = self.get_train_pos_prob()
         
         self.neg_disjoint_loss_func = unit_cube.lambda_zero
@@ -84,7 +84,7 @@ class torch_model(nn.Module):
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
             min_lower_scale, min_higher_scale = -1, 10
-            delta_lower_scale, delta_higher_scale = 0.1, 2
+            delta_lower_scale, delta_higher_scale = 0.1, 2.5
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
@@ -129,9 +129,8 @@ class torch_model(nn.Module):
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var + min_embed_mean
-        t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) \
-                            * delta_embed_var + delta_embed_mean
+        t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
+        t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) 
 
         t2_max_embed = t2_min_embed + t2_delta_embed
         
@@ -139,8 +138,8 @@ class torch_model(nn.Module):
             t1_embed1.unsqueeze(0)
             t1_embed2.unsqueeze(0)
         
-        t1_min_embed = torch.abs(t1_embed1) * min_embed_var + min_embed_mean
-        t1_delta_embed = torch.abs(t1_embed2) * min_embed_var + min_embed_mean
+        t1_min_embed = torch.abs(t1_embed1) * min_embed_var
+        t1_delta_embed = torch.abs(t1_embed2) * 10 + delta_embed_mean
         
         t1_max_embed = t1_min_embed + t1_delta_embed
         
@@ -247,7 +246,7 @@ class torch_model(nn.Module):
         embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
         embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
 
-        embedding5 = torch.abs(x1) * min_embed_var + min_embed_mean
-        embedding6 = torch.abs(x2) * min_embed_var + min_embed_mean
+        embedding5 = torch.abs(x1) * min_embed_var
+        embedding6 = torch.abs(x2) * 10 + delta_embed_mean
         
         shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], epoch, i, label)
