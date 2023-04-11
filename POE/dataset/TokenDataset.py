@@ -5,7 +5,7 @@ class TokenDatesetTrain(Dataset):
     def __init__(self, token_path, token_info_path):
         token_arr_all = np.loadtxt(token_path, dtype=np.int32)
         token_arr_all_len = token_arr_all.shape[0]
-        train_len = int(token_arr_all_len * 0.8)
+        train_len = int(token_arr_all_len * 1.0)
         self.token_arr = token_arr_all[:train_len, :]
         token_info = []
         with open(token_info_path, 'r') as f:

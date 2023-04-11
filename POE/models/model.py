@@ -138,7 +138,7 @@ class torch_model(nn.Module):
             t1_embed1.unsqueeze(0)
             t1_embed2.unsqueeze(0)
         
-        t1_min_embed = torch.abs(t1_embed1) * min_embed_var
+        t1_min_embed = t1_embed1 * 5 + 5
         t1_delta_embed = torch.abs(t1_embed2) * 10 + delta_embed_mean
         
         t1_max_embed = t1_min_embed + t1_delta_embed
@@ -246,7 +246,7 @@ class torch_model(nn.Module):
         embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
         embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
 
-        embedding5 = torch.abs(x1) * min_embed_var
+        embedding5 = x1 * 5 + 5
         embedding6 = torch.abs(x2) * 10 + delta_embed_mean
         
         shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], epoch, i, label)

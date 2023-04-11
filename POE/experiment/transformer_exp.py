@@ -148,7 +148,7 @@ if __name__ == "__main__":
     
     encoder_model = SimpleTransformerEncoder(num_tokens=35, dim_model=EMBED_DIM)
     model = SimpleTokenBoxEmbeddingModel(encoder_model, box_embedding_model, device, TOKEN_LEN, EMBED_DIM)
-    # model.load_state_dict(torch.load('program_transform.pth.tar'))
+    model.load_state_dict(torch.load('program_transform.pth.tar'))
     token_dataset = TokenDatesetTrain(TOKEN_PATH, TOKEN_INFO_PATH)
     dataloder = DataLoader(token_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
     with open('log_image_train.txt', 'r+') as f:

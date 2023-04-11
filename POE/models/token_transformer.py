@@ -166,12 +166,11 @@ class SimpleTransformerEncoder(nn.Module):
         self.embedding = nn.Embedding(num_tokens, dim_model)
 
     def forward(self, src, src_pad_mask=None):
-        # Src size must be (batch_size, src sequence length, dim_model)
-        src = self.embedding(src)
-        
+        out = self.embedding(src)
         for e in src_pad_mask.nonzero():
-            src[e[0], e[1], :] = 0.0
-        out = src
+            out[e[0], e[1], :] = 0.0
+            
+        # Src size must be (batch_size, src sequence length, dim_model)
         return out
     
 
@@ -192,8 +191,10 @@ class SimpleTokenBoxEmbeddingModel(nn.Module):
         box_embedding_vector = self.linear(encoder_out)
         
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
-        if label[0][0] == 1: 
+
+        if label[0][0] == 1 and label[1][0] == 0 and label[2][0] == 5: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
+            # breakpoint()
             
         pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
         pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))

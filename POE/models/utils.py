@@ -102,7 +102,7 @@ def shape_color_embed(color_embeddings, shape_embeddings, x_embeddings, epoch, i
     plt.axis('equal')
     plt.xlim(-10, 15)
     plt.ylim(-10, 15)
-    plt.savefig(f'./image_res/{epoch}_{i}_{label}.png')
+    plt.savefig(f'./image_res/k.png')
     plt.close()
     # breakpoint()
     # exit(0)
