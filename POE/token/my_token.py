@@ -329,7 +329,7 @@ def str_to_token(str_path, token_dict_path, save_path):
             line_res = []
             line_info = []
             line_count = 0
-            if i % 3 == 1:
+            if True:
                 for e in line_arr:
                     try:
                         p = int(e)

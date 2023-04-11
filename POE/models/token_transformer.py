@@ -167,9 +167,6 @@ class SimpleTransformerEncoder(nn.Module):
 
     def forward(self, src, src_pad_mask=None):
         out = self.embedding(src)
-        for e in src_pad_mask.nonzero():
-            out[e[0], e[1], :] = 0.0
-            
         # Src size must be (batch_size, src sequence length, dim_model)
         return out
     
@@ -186,15 +183,19 @@ class SimpleTokenBoxEmbeddingModel(nn.Module):
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
         encoder_out = self.transformer_encoder(x, src_pad_mask=src_padding_mask)
         
-        batch_size = encoder_out.shape[0]
-        encoder_out = encoder_out.reshape(batch_size, -1)
-        box_embedding_vector = self.linear(encoder_out)
-        
+        # batch_size = encoder_out.shape[0]
+        # encoder_out = encoder_out.reshape(batch_size, -1)
+        # box_embedding_vector = self.linear(encoder_out)
+        src_padding_mask = 1.0 - src_padding_mask.float()
+        src_padding_mask = src_padding_mask.unsqueeze(2)
+        box_embedding_vector = torch.sum(src_padding_mask * encoder_out, dim=1) / torch.sum(src_padding_mask)
+
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
 
-        if label[0][0] == 1 and label[1][0] == 0 and label[2][0] == 5: 
+        if label[0][0] == 1 and label[1][0] == 0 and label[2][0] == 7: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
-            # breakpoint()
+    
+           
             
         pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
         pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
