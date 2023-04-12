@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-MAX_TOKEN_LEN = 9
+MAX_TOKEN_LEN = 27
 
 
 SEED = 20010628
@@ -40,7 +40,7 @@ class Circle(object):
         y = ceil(self.y) + 9
         radius = ceil(self.radius*2) - 1
         color = self.color
-        return f"Circle {color}\n"
+        return f"<BEGIN> Circle({x}, {y}, {radius}); {color} <END>\n"
     
 class Line(object):
     """
@@ -66,7 +66,7 @@ class Line(object):
         x1 = ceil(self.x1) + 9
         y1 = ceil(self.y1) + 9
         
-        return f"Line\n"
+        return f"Line({x0}, {y0}, {x1}, {y1})\n"
     
     
 class Rectangle(object):
@@ -99,8 +99,8 @@ class Rectangle(object):
         assert line1_len == line3_len and line2_len == line4_len
     
     def __str__(self):
-        return f"{str(self.line1)[:-1]} ; {str(self.line2)[:-1]} ; "+\
-                f"{str(self.line3)[:-1]} ; {str(self.line4)[:-1]} ; {self.color}\n"
+        return f"<BEGIN> {str(self.line1)[:-1]}; {str(self.line2)[:-1]}; "+\
+                f"{str(self.line3)[:-1]}; {str(self.line4)[:-1]}; {self.color} <END>\n"
  
 class Triangle(object):
     """
@@ -127,8 +127,8 @@ class Triangle(object):
         pass
     
     def __str__(self):
-        return f"{str(self.line1)[:-1]} ; {str(self.line2)[:-1]} ; " \
-                + f"{str(self.line3)[:-1]} ; {self.color}\n"
+        return f"<BEGIN> {str(self.line1)[:-1]}; {str(self.line2)[:-1]}; " \
+                + f"{str(self.line3)[:-1]}; {self.color} <END>\n"
     
     
 class TokenGenerator(object):
@@ -331,10 +331,7 @@ def str_to_token(str_path, token_dict_path, save_path):
             line_count = 0
             if True:
                 for e in line_arr:
-                    try:
-                        p = int(e)
-                    except ValueError:
-                        line_res.append(token_dict[e])
+                    line_res.append(token_dict[e])
                     if e == 'Line':
                         line_count += 1
                     if e == 'Circle' or e in COLOR_ARR:
@@ -343,13 +340,10 @@ def str_to_token(str_path, token_dict_path, save_path):
                         line_info.append('Triangle')
                     if line_count == 4:
                         line_info[0] = 'Rectangle'
-                flag = True
+                label_flag.append(True)
             else:
                 for e in line_arr:
-                    try:
-                        p = int(e)
-                    except ValueError:
-                        line_res.append(token_dict[e])
+                    line_res.append(token_dict[e])
                     if e == 'Circle':
                         if random.random() > 0.5:
                             line_info.append('Triangle')
@@ -370,17 +364,15 @@ def str_to_token(str_path, token_dict_path, save_path):
                             line_info.append('Rectangle')
                     if line_count == 4:
                         if random.random() > 0.5:
-                            line_info[0] = 'Circle'
+                            line_info.append('Circle')
                         else:
-                            line_info[0] = 'Triangle'
-                flag = False
+                            line_info.append('Triangle')
+                label_flag.append(False)
                     
             for _ in range(MAX_TOKEN_LEN-len(line_res)):
                 line_res.append(PAD)
-            if (line_info, flag) not in zip(token_info, label_flag):
-                token_res.append(line_res)
-                token_info.append(line_info)
-                label_flag.append(flag)
+            token_res.append(line_res)
+            token_info.append(line_info)
 
     np.savetxt('../config/token_config/token.txt', token_res, fmt='%i')
     with open('../config/token_config/token_info.txt', 'w') as f:
@@ -393,9 +385,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, help='The path we save our config', \
                         default='/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/token_config')
-    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=2000)
-    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=2000)
-    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=2000)
+    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=300)
+    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=300)
+    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=300)
     parser.add_argument('--gen_cfg', type=bool, help='Whether we generate the config', default=False)
     parser.add_argument('--vis_save_dir', type=str, help='Where to save our visualization result.', default='../dataset/data')
     parser.add_argument('--num_count', type=int, help='The range of the bin count from 0', default=20)
@@ -403,7 +395,6 @@ if __name__ == "__main__":
     
     if args.gen_cfg:    
         gen_config(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
-        # visualize(args.config_path, args.vis_save_dir)
     
         token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
         gen_str = str(token_gen)

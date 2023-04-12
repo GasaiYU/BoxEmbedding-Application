@@ -73,7 +73,7 @@ def lambda_batch_log_prob(join_min, join_max, meet_min, meet_max, t1_min_embed, 
     cond_log = joint_log - domi_log # batch_size
     smooth_log_prob = smooth_prob(cond_log) # batch_size
     neg_smooth_log_prob = -smooth_log_prob # batch_size
-    loss = torch.sigmoid(neg_smooth_log_prob)
+    loss = neg_smooth_log_prob
     return loss
 
 
@@ -94,21 +94,22 @@ def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_
     b_prob = torch.exp(b_log_prob)
     
     cond_log = torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    cond_loss = torch.sigmoid(cond_log)
+    cond_loss = cond_log
     return cond_loss
     
 
 """Disjoint neg prob loss"""
 def lambda_zero(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
-    joint_log_prob = batch_log_prob(join_min, join_max)
-    joint_prob = torch.exp(joint_log_prob)
-    a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
-    a_prob = torch.exp(a_log_prob)
-    b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
-    b_prob = torch.exp(b_log_prob)
+    # joint_log_prob = batch_log_prob(join_min, join_max)
+    # joint_prob = torch.exp(joint_log_prob)
+    # a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
+    # a_prob = torch.exp(a_log_prob)
+    # b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
+    # b_prob = torch.exp(b_log_prob)
     
-    cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    cond_loss = torch.sigmoid(cond_log)
+    # cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
+    # cond_loss = torch.sigmoid(cond_log)
+    cond_loss = torch.zeros(join_min.shape[0])
     return cond_loss
 
 """Overlap neg prob loss"""
@@ -119,8 +120,8 @@ def lambda_batch_log_1minus_prob(join_min, join_max, meet_min, meet_max, t1_min_
     # neg_smooth_log_prob = -smooth_prob(cond_log)
 
     # onemp_neg_smooth_log_prob = -utils.log1mexp(neg_smooth_log_prob)
-    neg_smooth_log_prob = smooth_prob(cond_log)
-    loss = torch.sigmoid(neg_smooth_log_prob)
+    smooth_log_prob = smooth_prob(cond_log)
+    loss = torch.sigmoid(smooth_log_prob)
     return loss
     
     

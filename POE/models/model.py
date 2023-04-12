@@ -84,7 +84,7 @@ class torch_model(nn.Module):
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
             min_lower_scale, min_higher_scale = -1, 10
-            delta_lower_scale, delta_higher_scale = 0.1, 2.5
+            delta_lower_scale, delta_higher_scale = 0.1, 2
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
@@ -138,8 +138,8 @@ class torch_model(nn.Module):
             t1_embed1.unsqueeze(0)
             t1_embed2.unsqueeze(0)
         
-        t1_min_embed = t1_embed1 * 5 + 5
-        t1_delta_embed = torch.abs(t1_embed2) * 10 + delta_embed_mean
+        t1_min_embed = t1_embed1 * min_embed_var + min_embed_mean
+        t1_delta_embed = torch.abs(t1_embed2) * delta_embed_var + delta_embed_mean
         
         t1_max_embed = t1_min_embed + t1_delta_embed
         
@@ -246,7 +246,7 @@ class torch_model(nn.Module):
         embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
         embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
 
-        embedding5 = x1 * 5 + 5
-        embedding6 = torch.abs(x2) * 10 + delta_embed_mean
+        embedding5 = x1 * min_embed_var + min_embed_mean
+        embedding6 = torch.abs(x2) * delta_embed_var + delta_embed_mean
         
         shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], epoch, i, label)

@@ -101,16 +101,17 @@ class TransformerEncoder(nn.Module):
         self.embedding = nn.Embedding(num_tokens, dim_model)
         self.transformer_encoder_layer = nn.TransformerEncoderLayer(d_model=dim_model,
                                                                 nhead=num_heads,
-                                                                dropout=dropout_p)
+                                                                dropout=dropout_p,
+                                                                batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.transformer_encoder_layer, num_layers=num_encoder_layers)
 
     def forward(self, src, src_pad_mask=None):
         # Src size must be (batch_size, src sequence length, dim_model)
-        src = self.embedding(src) * math.sqrt(self.dim_model)
+        src = self.embedding(src)
         src = self.positional_encoder(src)
 
         # to convert to shape (sequence length, batch_size, dim_model)
-        src = src.permute(1, 0, 2)
+        # src = src.permute(1, 0, 2)
         # encoder. Out size: (sequence length, batch_size, dim_model)
         out = self.transformer_encoder(src, src_key_padding_mask=src_pad_mask)
         
@@ -126,18 +127,40 @@ class TokenBoxEmbeddingModel(nn.Module):
         super().__init__()
         self.transformer_encoder = transformer_encoder.to(device)
         self.box_embedding_model = box_embedding_model.to(device)
-        self.linear = nn.Linear(in_features=token_len*embed_dim, out_features=embed_dim)
+        self.linear = nn.Linear(in_features=(token_len+1)*embed_dim, out_features=embed_dim)
+        self.linear2 = nn.Linear(in_features=embed_dim, out_features=4)
         self.relu = nn.LeakyReLU()
+        # self.transformer_encoder = nn.Embedding(35, 4)
         pass
     
     def forward(self, x, color_idx, shape_idx, label, idx, epoch, i):
-
+        # begin = torch.ones([x.shape[0], 1], dtype=torch.int64).to(x.device) * 21
+        # x = torch.cat([begin, x], dim=1)
+        # print(x)
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
+        # print(src_padding_mask)
         encoder_out = self.transformer_encoder(x, src_pad_mask=src_padding_mask)
  
+        # src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
+        # encoder_out = self.transformer_encoder(x)
+        
+        # batch_size = encoder_out.shape[0]
+        # encoder_out = encoder_out.reshape(batch_size, -1)
+        # box_embedding_vector = self.linear(encoder_out)
+ 
+ 
+ 
         # change (S, N, E) -> (N, S, E)
-        encoder_out = encoder_out.permute(1,0,2)
-        box_embedding_vector = encoder_out[:, 0, :]
+        # encoder_out = encoder_out.permute(1,0,2)
+        # print(encoder_out)
+        # box_embedding_vector = (encoder_out * (1 - src_padding_mask.int()).unsqueeze(-1)).sum(1) / (1 - src_padding_mask.int()).sum(-1, keepdim=True)
+        # box_embedding_vector = self.linear2(box_embedding_vector)
+
+        # box_embedding_vector = encoder_out.max(1)[0]
+        # box_embedding_vector = encoder_out.mean(1)
+        box_embedding_vector = (encoder_out * (1 - src_padding_mask.int()).unsqueeze(-1)).max(1)[0]
+        box_embedding_vector = self.linear2(box_embedding_vector)
+        # box_embedding_vector = encoder_out[:, 0, :]
             
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
         if label[0][0] == 1: 
@@ -183,20 +206,18 @@ class SimpleTokenBoxEmbeddingModel(nn.Module):
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())
         encoder_out = self.transformer_encoder(x, src_pad_mask=src_padding_mask)
         
-        # batch_size = encoder_out.shape[0]
-        # encoder_out = encoder_out.reshape(batch_size, -1)
-        # box_embedding_vector = self.linear(encoder_out)
-        src_padding_mask = 1.0 - src_padding_mask.float()
-        src_padding_mask = src_padding_mask.unsqueeze(2)
-        box_embedding_vector = torch.sum(src_padding_mask * encoder_out, dim=1) / torch.sum(src_padding_mask)
+        batch_size = encoder_out.shape[0]
+        encoder_out = encoder_out.reshape(batch_size, -1)
+        box_embedding_vector = self.linear(encoder_out)
+        # src_padding_mask = 1.0 - src_padding_mask.float()
+        # src_padding_mask = src_padding_mask.unsqueeze(2)
+        # box_embedding_vector = torch.sum(src_padding_mask * encoder_out, dim=1) / torch.sum(src_padding_mask)
 
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
 
-        if label[0][0] == 1 and label[1][0] == 0 and label[2][0] == 7: 
+        if label[0][0] == 1: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
     
-           
-            
         pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
         pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
 
