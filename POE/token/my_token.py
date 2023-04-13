@@ -15,6 +15,7 @@ MAX_TOKEN_LEN = 27
 SEED = 20010628
 COLOR_ARR = ['RED', "BLUE", 'GREEN', 'PURPLE', 'BLACK']
 SHAPE_ARR = ['Circle', 'Rectangle', 'Triangle']
+color_map_dict = {'RED':'r', 'BLUE':'b', 'GREEN':'g', 'PURPLE':'m', 'BLACK':'k'}
 PAD = 32
 
 class Circle(object):
@@ -256,11 +257,12 @@ def visualize(config_dir, save_dir):
             x = float(line_arr[0])
             y = float(line_arr[1])
             r = float(line_arr[2])
-            circle = plt.Circle((x, y), r)
+            c = str(line_arr[-1][:-1])
+            circle = plt.Circle((x, y), r, color=color_map_dict[c], fill=True)
             plt.gcf().gca().add_artist(circle)
             plt.axis('equal')
-            plt.xlim(-10, 10)
-            plt.ylim(-10, 10)
+            plt.xlim(-20, 20)
+            plt.ylim(-20, 20)
             plt.savefig(os.path.join(save_dir, f'circle/{i}.png'))
             plt.close()
             
@@ -271,14 +273,15 @@ def visualize(config_dir, save_dir):
             y0 = float(line_arr[1])
             x2 = float(line_arr[2]) 
             y2 = float(line_arr[3])
+            c = str(line_arr[-1][:-1])
             h = y0 - y2
             w = x2 - x0
-            rect = plt.Rectangle((x0, y2), h, w)
+            rect = plt.Rectangle((x0, y2), h, w, color=color_map_dict[c], fill=True)
             plt.gcf().gca().add_artist(rect)
 
             plt.axis('equal')
-            plt.xlim(-10, 10)
-            plt.ylim(-10, 10)
+            plt.xlim(-20, 20)
+            plt.ylim(-20, 20)
             plt.savefig(f'../dataset/data/rectangle/{i}.png')
             plt.close()
     
@@ -288,12 +291,13 @@ def visualize(config_dir, save_dir):
             p1 = [float(line_arr[0]), float(line_arr[1])]
             p2 = [float(line_arr[2]), float(line_arr[3])]
             p3 = [float(line_arr[4]), float(line_arr[5])]
-            tria = plt.Polygon([p1, p2, p3])
+            c = str(line_arr[-1][:-1])
+            tria = plt.Polygon([p1, p2, p3], color=color_map_dict[c], fill=True)
             plt.gcf().gca().add_artist(tria)
 
             plt.axis('equal')
-            plt.xlim(-10, 10)
-            plt.ylim(-10, 10)
+            plt.xlim(-20, 20)
+            plt.ylim(-20, 20)
             plt.savefig(f'../dataset/data/triangle/{i}.png')
             plt.close()        
             
@@ -329,7 +333,7 @@ def str_to_token(str_path, token_dict_path, save_path):
             line_res = []
             line_info = []
             line_count = 0
-            if True:
+            if i % 3 != 1:
                 for e in line_arr:
                     line_res.append(token_dict[e])
                     if e == 'Line':
@@ -364,9 +368,9 @@ def str_to_token(str_path, token_dict_path, save_path):
                             line_info.append('Rectangle')
                     if line_count == 4:
                         if random.random() > 0.5:
-                            line_info.append('Circle')
+                            line_info[0] = 'Circle'
                         else:
-                            line_info.append('Triangle')
+                            line_info[0] = 'Triangle'
                 label_flag.append(False)
                     
             for _ in range(MAX_TOKEN_LEN-len(line_res)):
@@ -385,9 +389,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, help='The path we save our config', \
                         default='/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/token_config')
-    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=300)
-    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=300)
-    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=300)
+    parser.add_argument('--num_circles', type=int, help='The number of the circles', default=200)
+    parser.add_argument('--num_rectangles', type=int, help='The number of the rectangles', default=200)
+    parser.add_argument('--num_triangles', type=int, help='The number of the triangles', default=200)
     parser.add_argument('--gen_cfg', type=bool, help='Whether we generate the config', default=False)
     parser.add_argument('--vis_save_dir', type=str, help='Where to save our visualization result.', default='../dataset/data')
     parser.add_argument('--num_count', type=int, help='The range of the bin count from 0', default=20)
@@ -395,7 +399,7 @@ if __name__ == "__main__":
     
     if args.gen_cfg:    
         gen_config(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
-    
+        visualize(args.config_path, args.vis_save_dir)
         token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
         gen_str = str(token_gen)
         with open(os.path.join(args.config_path, 'str.txt'), 'w') as f:

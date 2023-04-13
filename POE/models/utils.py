@@ -70,6 +70,7 @@ def vis_all(min_embeddings, delta_embeddings):
     plt.ylim(-10, 15)
     plt.savefig(f'./image_res/1.png')
     exit(0)
+
     pass
 
 def shape_color_embed(color_embeddings, shape_embeddings, x_embeddings, epoch, i, label):

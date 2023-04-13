@@ -89,6 +89,9 @@ class torch_model(nn.Module):
             raise ValueError("Expected either exp or uniform but received", self.measure)
         return min_lower_scale, min_higher_scale, delta_lower_scale, delta_higher_scale
             
+    def get_mi_loss(self):
+        mi_loss = unit_cube.get_embeddings_mi(self.min_embed, self.delta_embed)
+        return mi_loss
     
     def init_word_embedding(self):
         if self.init_embedding == 'random':
@@ -129,8 +132,13 @@ class torch_model(nn.Module):
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
-        t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) 
+        t2_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var \
+                        + min_embed_mean
+        t2_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) * delta_embed_var \
+                        + delta_embed_mean
+        
+        # t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
+        # t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) 
 
         t2_max_embed = t2_min_embed + t2_delta_embed
         
@@ -243,10 +251,23 @@ class torch_model(nn.Module):
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
-        embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
+        embedding1, embedding2 = self.get_idx_embed(t1x)
+        embedding3, embedding4 = self.get_idx_embed(t2x)
 
         embedding5 = x1 * min_embed_var + min_embed_mean
         embedding6 = torch.abs(x2) * delta_embed_var + delta_embed_mean
         
         shape_color_embed([embedding1, embedding2], [embedding3, embedding4], [embedding5, embedding6], epoch, i, label)
+        
+    def vis_all(self):
+        min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
+        min_embed_var = self.min_higher_scale - min_embed_mean
+        delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
+        delta_embed_var = self.delta_higher_scale - delta_embed_mean
+        
+        min_embeddings = []
+        delta_embeddings = []
+        for i in range(self.vocab_size):
+            min_embeddings.append(self.min_embed(torch.tensor(i)) * min_embed_var + min_embed_mean)
+            delta_embeddings.append(torch.abs(self.delta_embed(torch.tensor(i))) * delta_embed_var + delta_embed_mean)
+        vis_all(min_embeddings, delta_embeddings)

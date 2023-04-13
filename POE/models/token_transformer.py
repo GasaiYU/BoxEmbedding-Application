@@ -163,13 +163,15 @@ class TokenBoxEmbeddingModel(nn.Module):
         # box_embedding_vector = encoder_out[:, 0, :]
             
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
-        if label[0][0] == 1: 
+        if False: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
             
+        # self.box_embedding_model.vis_all()
         pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
         pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
+        mi_loss = self.box_embedding_model.get_mi_loss()
 
-        return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape       
+        return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape, mi_loss       
     
     @staticmethod
     def split_dim(x):
@@ -215,7 +217,7 @@ class SimpleTokenBoxEmbeddingModel(nn.Module):
 
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
 
-        if label[0][0] == 1: 
+        if label[0][0] == 1 and epoch > 100: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
     
         pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))

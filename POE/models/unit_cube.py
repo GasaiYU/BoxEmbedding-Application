@@ -7,6 +7,10 @@ from box_embeddings.modules.intersection import Intersection
 
 import models.utils as utils
 
+import torch.nn.functional as F
+
+from sklearn.feature_selection import mutual_info_regression
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def calc_join_and_meet(t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
@@ -100,16 +104,16 @@ def lambda_batch_log_upper_bound(join_min, join_max, meet_min, meet_max, t1_min_
 
 """Disjoint neg prob loss"""
 def lambda_zero(join_min, join_max, meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed):
-    # joint_log_prob = batch_log_prob(join_min, join_max)
-    # joint_prob = torch.exp(joint_log_prob)
-    # a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
-    # a_prob = torch.exp(a_log_prob)
-    # b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
-    # b_prob = torch.exp(b_log_prob)
+    joint_log_prob = batch_log_prob(join_min, join_max)
+    joint_prob = torch.exp(joint_log_prob)
+    a_log_prob = batch_log_prob(t1_min_embed, t1_max_embed)
+    a_prob = torch.exp(a_log_prob)
+    b_log_prob = batch_log_prob(t2_min_embed, t2_max_embed)
+    b_prob = torch.exp(b_log_prob)
     
-    # cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
-    # cond_loss = torch.sigmoid(cond_log)
-    cond_loss = torch.zeros(join_min.shape[0])
+    cond_log = -torch.log(joint_prob - a_prob - b_prob + torch.tensor(0.01))
+    cond_loss = torch.sigmoid(cond_log)
+    # cond_loss = torch.zeros(join_min.shape[0])
     return cond_loss
 
 """Overlap neg prob loss"""
@@ -124,4 +128,30 @@ def lambda_batch_log_1minus_prob(join_min, join_max, meet_min, meet_max, t1_min_
     loss = torch.sigmoid(smooth_log_prob)
     return loss
     
+def get_embeddings_mi(min_embeddings, delta_embeddings, feature_size=8):
+    return 0
+    pass
+
+# Gumble Box
+def get_min_max(c, o):
+    x_min = torch.sigmoid(c - F.softplus(o))
+    x_max = torch.sigmoid(c + F.softplus(o))
+    return x_min, x_max
+    
+def calc_gumbel_meet(t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed, beta=1):
+    z_mk = beta * torch.log(torch.exp(t1_min_embed / beta) + torch.exp(t2_min_embed / beta))
+    z_Mk = -beta * torch.log(torch.exp(-t1_max_embed / beta) + torch.exp(-t2_max_embed / beta))
+    return z_mk, z_Mk
+
+def gumble_box_volume(x_min, x_max, beta=1):
+    gamma = 0.5772
+    prod_e = F.softplus((x_max - x_min) / beta - 2 * gamma)
+    res = torch.prod(prod_e, dim=1)
+    return res
+
+def gumble_loss_func(meet_min, meet_max, t1_min_embed, t1_max_embed, t2_min_embed, t2_max_embed, beta=1):
+    join_vol = gumble_box_volume(meet_min, meet_max, beta)
+    x_vol = gumble_box_volume(t1_min_embed, t1_max_embed, beta)
+    log_prob = torch.log(join_vol) - torch.log(x_vol)
+    return log_prob
     
