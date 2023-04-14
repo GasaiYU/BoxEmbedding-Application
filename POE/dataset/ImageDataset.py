@@ -55,5 +55,4 @@ class ImageDataset(Dataset):
             return self.tria_dict[index-len(self.circle_dict.keys())-len(self.rect_dict.keys())]
         else:
             raise KeyError('Out of range')
-        
-        
+

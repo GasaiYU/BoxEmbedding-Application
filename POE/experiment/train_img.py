@@ -1,61 +1,114 @@
 import torch
-import torch.nn as nn
-from torch.optim import Adam
-from torch.utils.data import DataLoader
+import numpy as np
+
+from torch.optim import Adam, AdamW
 
 import sys
 sys.path.append('..')
 
-from dataset.ImageDataset import ImageDataset
 from models.model import torch_model
+from models.image_cnn import ImageCNN, ImageCNNWithBoxEmbedding
+from dataset.SketchImageDataset import SketchImageDataset
+
+from torch.utils.data import DataLoader
+
+OKEN_PATH = '../config/token_config/token.txt'
+TOKEN_INFO_PATH = '../config/token_config/token_info.txt'
+IMAGE_DIR = '../dataset/data'
+
 
 import warnings
 warnings.filterwarnings("ignore")
 
-BATCH_SIZE = 16
-FEATURE_SIZE = 10
-DATA_SIZE = 1500
+BATCH_SIZE = 15
+EMBED_DIM = 4
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
 
-def train_loop():
-    dataset = ImageDataset('/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/dataset/data/labels/circle_label.json',\
-                                         '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/dataset/data/labels/rectangle_label.json',\
-                                         '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/dataset/data/labels/triangle_label.json')
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=16)
-    poe_model = torch_model(DATA_SIZE+FEATURE_SIZE, device).to(device)
-    optimizer = Adam(poe_model.parameters(), lr=1e-3)
-    all_color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-    running_loss = last_loss = 0
-    with open('log_image_train.txt', 'w')as f:
-        f.write('Begin Training.\n')
+def parse_labels(label):
+    shape_idx = []
+    for e in label[0]:
+        shape_idx.append(FEATURE_DICT[e])
+    
+    color_idx = []
+    for e in label[1]:
+        color_idx.append(FEATURE_DICT[e])
         
-    for epoch in range(50):
-        for i, image_dict in enumerate(dataloader):
-            t1x = torch.tensor(image_dict['index']).to(device)
-            color_idx = torch.tensor(image_dict['color']).to(device)
-            shape_idx = torch.tensor(image_dict['shape'] + len(all_color)).to(device)
-            pos_prob_color, _ = poe_model.forward((t1x, color_idx))
-            pos_prob_shape, _ = poe_model.forward((t1x, shape_idx))
+    truth_label = []
+
+    for e in label[2]:
+        if e == 'True':
+            truth_label.append(1)
+        else:
+            truth_label.append(0)
+    
+    idx = []      
+    for e in label[3]:
+        idx.append(e)
+
+    return shape_idx, color_idx, truth_label, idx
+
+
+def train_loop(model, dataloader, epoch_num, device):
+    model.train()
+    running_loss = last_loss = 0
+    optimizer = Adam(model.parameters(), lr=1e-2)
+    
+    for epoch in range(epoch_num):
+        # if epoch % 10 == 0:
+        #     eval_loop(epoch, model, device)
+        running_loss = 0
+        
+        for i, batch in enumerate(dataloader):
+            img, labels = batch
+            img = img.to(device)
+
+            shape_idx, color_idx, truth_label, idx = parse_labels(labels)
             
-            loss = (torch.sum(pos_prob_color) + torch.sum(pos_prob_shape)) / BATCH_SIZE
+            truth_label = torch.tensor(truth_label).to(device)
+            train_pos_prob_color, train_neg_prob_color, train_pos_prob_shape, train_neg_prob_shape, mi_loss \
+                = model(img, color_idx, shape_idx, [truth_label, shape_idx, color_idx], epoch, i)
             
+            pos_prob_color = torch.mul(train_pos_prob_color, truth_label)
+            neg_prob_color = torch.mul(train_neg_prob_color, 1-truth_label)
+            pos_prob_shape = torch.mul(train_pos_prob_shape, truth_label)
+            neg_prob_shape = torch.mul(train_neg_prob_shape, 1-truth_label)
+            
+            loss = torch.sum(pos_prob_color) / (BATCH_SIZE) + torch.sum(pos_prob_shape) / (BATCH_SIZE)\
+                    + torch.sum(neg_prob_color) / (BATCH_SIZE) + torch.sum(neg_prob_shape) / (BATCH_SIZE) \
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            running_loss += loss.item()
-            if i % 50 == 49:
-                last_loss = running_loss / 100
-                print(f"epoch {epoch} batch {i} Loss {last_loss}")
-                with open("log_image_train.txt", "a") as f:
-                    f.write(f"epoch {epoch} batch {i} Loss {last_loss}\n")
-                running_loss = 0
-            pass
-    
-    torch.save(poe_model.state_dict(), 'image_ckpt.pth.tar')
             
-if __name__ == "__main__":
-    train_loop()
-         
+            running_loss += loss.item()
+            
+            if i % 15 == 14 or True:
+                last_loss = running_loss
+                print(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}")
+                with open("logs/log_image_train.txt", "a") as f:
+                    f.write(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}\n")
+                running_loss = 0 
+                
+    torch.save(model.state_dict(), 'image_cnn.pth.tar')        
     
+    
+def eval_loop(epoch, model ,device):
+    pass
+    
+if __name__ == "__main__":
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    cnn_model = ImageCNN(num_layers=3, embed_dim=EMBED_DIM, in_c=3, \
+                         out_c=16)
+    box_embedding_model = torch_model(10, device, feature_size=len(FEATURE_DICT.keys()))
+    model = ImageCNNWithBoxEmbedding(cnn_model, box_embedding_model, device)
+    
+    image_dataset_train = SketchImageDataset(IMAGE_DIR, TOKEN_INFO_PATH, ratio=0.8)
+    dataloader = DataLoader(image_dataset_train, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
+    
+    with open('logs/log_image_train.txt', 'r+') as f:
+        f.truncate(0)
+    with open('logs/log_image_test.txt', 'r+') as f:
+        f.truncate(0)
+        
+    train_loop(model, dataloader, 100, device)

@@ -1,0 +1,43 @@
+Job start at 2023-04-14 14:58:56
+Job run at:
+   Static hostname: localhost.localdomain
+Transient hostname: gpu-v16
+         Icon name: computer-server
+           Chassis: server
+        Machine ID: b3db11d099384b0eaa400250d40b1217
+           Boot ID: 7ad67a7d33a3459299147e03d7ab99c5
+  Operating System: CentOS Linux 7 (Core)
+       CPE OS Name: cpe:/o:centos:centos:7
+            Kernel: Linux 3.10.0-1127.13.1.el7.x86_64
+      Architecture: x86-64
+Have already added /tools/cluster-modulefiles into $MODULEPATH
+
+/usr/bin/gcc
+/lustre/S/gaomj/miniconda3/envs/bachelor/bin/python
+/tools/cluster-software/python3/python3-3.6.8/bin/python3
+############### /home : /home/S/gaomj
+Disk quotas for user gaomj (uid 6156): 
+     Filesystem   space   quota   limit   grace   files   quota   limit   grace
+          /home   5446M  16384M  20480M           36437       0       0        
+
+############### /workspace
+Disk quotas for user gaomj (uid 6156): 
+     Filesystem   space   quota   limit   grace   files   quota   limit   grace
+     /workspace      0K    400G    500G               1       0       0        
+
+############### /lustre
+Disk quotas for usr gaomj (uid 6156):
+     Filesystem    used   quota   limit   grace   files   quota   limit   grace
+        /lustre  9.759G      8T     10T       -  117868  3000000 36000000       -
+uid 6156 is using default block quota setting
+uid 6156 is using default file quota setting
+name, driver_version, power.limit [W]
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+NVIDIA Tesla V100-PCIE-32GB, 465.19.01, 200.00 W
+Use GPU 0,1,2,3,4,5,6,7
