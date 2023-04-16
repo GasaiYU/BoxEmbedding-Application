@@ -163,7 +163,7 @@ class TokenBoxEmbeddingModel(nn.Module):
         # box_embedding_vector = encoder_out[:, 0, :]
             
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
-        if False: 
+        if epoch > 500: 
             self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
             
         # self.box_embedding_model.vis_all()

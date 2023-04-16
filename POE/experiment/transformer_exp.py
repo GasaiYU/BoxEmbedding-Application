@@ -85,7 +85,7 @@ def train_loop(model, dataloader, epoch_num, device):
             if i % 15 == 14 or True:
                 last_loss = running_loss
                 print(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}")
-                with open("log_image_train.txt", "a") as f:
+                with open("logs/log_token_train.txt", "a") as f:
                     f.write(f"[Train] epoch {epoch} Batch {i} Loss {last_loss}\n")
                 running_loss = 0 
             
@@ -137,7 +137,7 @@ def eval_model(epoch, model, device):
             running_loss += loss.item()
                 
         print(f"[TEST] epoch {epoch} Loss {running_loss/180}")
-        with open("log_image_test.txt", "a") as f:
+        with open("logs/log_token_test.txt", "a") as f:
             f.write(f"[TEST] epoch {epoch} Loss {running_loss/180}\n")
 
     pass
@@ -156,10 +156,10 @@ if __name__ == "__main__":
     # model.load_state_dict(torch.load('program_transform.pth.tar'))
     token_dataset = TokenDatesetTrain(TOKEN_PATH, TOKEN_INFO_PATH)
     dataloder = DataLoader(token_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
-    with open('log_image_train.txt', 'r+') as f:
+    with open('logs/log_token_train.txt', 'r+') as f:
         f.truncate(0)
-    with open('log_image_test.txt', 'r+') as f:
+    with open('logs/log_token_test.txt', 'r+') as f:
         f.truncate(0)
     
-    train_loop(model, dataloder, 500, device)
+    train_loop(model, dataloder, 600, device)
     
