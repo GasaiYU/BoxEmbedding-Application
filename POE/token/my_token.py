@@ -333,7 +333,7 @@ def str_to_token(str_path, token_dict_path, save_path):
             line_res = []
             line_info = []
             line_count = 0
-            if i % 3 != 1:
+            if True:
                 for e in line_arr:
                     line_res.append(token_dict[e])
                     if e == 'Line':
@@ -385,6 +385,61 @@ def str_to_token(str_path, token_dict_path, save_path):
     # with open('../config/token_config/token.txt', 'wb') as f:
     #     np.save(f, np.asarray(token_res))
     
+def gen_operator_index(save_path):
+    count = 0
+    index_map = {}
+
+    for i in range(len(SHAPE_ARR)):
+        for j in range(len(SHAPE_ARR)):
+            if True:
+                index_map[f'{SHAPE_ARR[i]} {SHAPE_ARR[j]}'] = count
+                count += 1
+    
+    for i in range(len(COLOR_ARR)):
+        for j in range(len(COLOR_ARR)):
+            if True:
+                index_map[f'{COLOR_ARR[i]} {COLOR_ARR[j]}'] = count
+                count += 1
+    
+    with open(save_path, 'w') as f:
+        json.dump(index_map, f)
+        
+def file_line_content(file_path, line_num):
+    with open(file_path, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            if i == line_num:
+                line = line.replace('\n', '')
+                return line
+
+def generate_operator_txt(dict_path, info_path, token_path, save_path):
+    with open(dict_path, 'r') as f:
+        op_dict = json.load(f)
+        
+    f_info = open(info_path, 'r')
+    
+    info_res = []
+    with open(info_path, 'r') as f_info:
+        for line in f_info.readlines():
+            line = line.replace('\n', '')
+            info_res.append(line)
+
+    with open(save_path, 'w') as f:
+        for i in range(len(info_res)):
+            for j in range(len(info_res)):
+                if i != j:
+                    line1 = info_res[i]
+                    line1_arr = line1.split(' ')
+                    line2 = info_res[j]
+                    line2_arr = line2.split(' ')
+                    token1 = file_line_content(token_path, int(line1_arr[-1]))
+                    token2 = file_line_content(token_path, int(line2_arr[-1]))
+                    if line1_arr[0] == line2_arr[0] or line1_arr[1] == line2_arr[1]:
+                        continue
+                    op1 = op_dict[f'{line1_arr[0]} {line2_arr[0]}']
+                    op2 = op_dict[f'{line1_arr[1]} {line2_arr[1]}']
+                
+                    f.write(f'{token1},{op1},{op2},{token2}\n')
+                
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, help='The path we save our config', \
@@ -399,7 +454,7 @@ if __name__ == "__main__":
     
     if args.gen_cfg:    
         gen_config(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
-        visualize(args.config_path, args.vis_save_dir)
+        # visualize(args.config_path, args.vis_save_dir)
         token_gen = TokenGenerator(args.num_circles, args.num_rectangles, args.num_triangles, args.config_path)
         gen_str = str(token_gen)
         with open(os.path.join(args.config_path, 'str.txt'), 'w') as f:
@@ -409,5 +464,11 @@ if __name__ == "__main__":
         with open(os.path.join(args.config_path, 'token_dict.json'), 'w') as f:
                 json.dump(token_dict, f)
 
-    str_to_token(os.path.join(args.config_path, 'str.txt'), os.path.join(args.config_path, 'token_dict.json'),
+        str_to_token(os.path.join(args.config_path, 'str.txt'), os.path.join(args.config_path, 'token_dict.json'),
             os.path.join(args.config_path, 'token.txt'))
+    gen_operator_index(os.path.join(args.config_path, 'operator_index.json'))
+    generate_operator_txt(os.path.join(args.config_path, 'operator_index.json'),
+                         os.path.join(args.config_path, 'token_info_no_repeat.txt'),
+                         os.path.join(args.config_path, 'token.txt'),
+                         os.path.join(args.config_path, 'op.txt'))
+    

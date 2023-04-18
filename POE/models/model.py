@@ -107,7 +107,15 @@ class torch_model(nn.Module):
         else:
             raise NotImplementedError("Not Implemented Embedding Method.")
         
-    
+    def get_x_embeddings(self, x1, x2):
+        min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
+        min_embed_var = self.min_higher_scale - min_embed_mean
+        delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
+        delta_embed_var = self.delta_higher_scale - delta_embed_mean
+        
+        embedding1 = x1 * min_embed_var + min_embed_mean
+        embedding2 = torch.abs(x2) * delta_embed_var + delta_embed_mean
+        return torch.cat([embedding1, embedding2], dim=1)
     
     def get_word_embedding(self, t1_idx, t2_idx):
         """read word embedding from embedding table, get unit cube embeddings"""
@@ -132,13 +140,13 @@ class torch_model(nn.Module):
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        t2_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var \
-                        + min_embed_mean
-        t2_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) * delta_embed_var \
-                        + delta_embed_mean
+        # t2_min_embed = self.min_embed(torch.tensor(idx).clone().detach().to(self.device)) * min_embed_var \
+        #                 + min_embed_mean
+        # t2_delta_embed = torch.abs(self.delta_embed(torch.tensor(idx).clone().detach().to(self.device))) * delta_embed_var \
+        #                 + delta_embed_mean
         
-        # t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
-        # t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) 
+        t2_min_embed = self.min_feature_embed(torch.tensor(idx).clone().detach().to(self.device))
+        t2_delta_embed = torch.abs(self.delta_feature_embed(torch.tensor(idx).clone().detach().to(self.device))) 
 
         t2_max_embed = t2_min_embed + t2_delta_embed
         
@@ -251,8 +259,11 @@ class torch_model(nn.Module):
         delta_embed_mean = (self.delta_lower_scale + self.delta_higher_scale) / 2
         delta_embed_var = self.delta_higher_scale - delta_embed_mean
         
-        embedding1, embedding2 = self.get_idx_embed(t1x)
-        embedding3, embedding4 = self.get_idx_embed(t2x)
+        # embedding1, embedding2 = self.get_idx_embed(t1x)
+        # embedding3, embedding4 = self.get_idx_embed(t2x)
+        
+        embedding1, embedding2 = self.get_freeze_idx_embed(t1x)
+        embedding3, embedding4 = self.get_freeze_idx_embed(t2x)
 
         embedding5 = x1 * min_embed_var + min_embed_mean
         embedding6 = torch.abs(x2) * delta_embed_var + delta_embed_mean

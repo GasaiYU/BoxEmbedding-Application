@@ -1,0 +1,15 @@
+Circle BLACK 0
+Circle GREEN 1
+Circle RED 2
+Circle BLUE 6
+Circle PURPLE 9
+Rectangle BLACK 200
+Rectangle RED 201
+Rectangle BLUE 205
+Rectangle GREEN 211
+Rectangle PURPLE 226
+Triangle BLUE 400
+Triangle RED 401
+Triangle PURPLE 402
+Triangle GREEN 404
+Triangle BLACK 417
