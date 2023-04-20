@@ -133,7 +133,7 @@ class TokenBoxEmbeddingModel(nn.Module):
         # self.transformer_encoder = nn.Embedding(35, 4)
         pass
     
-    def forward(self, x, color_idx, shape_idx, label, idx, epoch, i):
+    def forward(self, x, features, label, epoch, i):
         # begin = torch.ones([x.shape[0], 1], dtype=torch.int64).to(x.device) * 21
         # x = torch.cat([begin, x], dim=1)
         # print(x)
@@ -147,8 +147,7 @@ class TokenBoxEmbeddingModel(nn.Module):
         batch_size = encoder_out.shape[0]
         encoder_out = encoder_out.reshape(batch_size, -1)
         box_embedding_vector = self.linear(encoder_out)
- 
- 
+
  
         # change (S, N, E) -> (N, S, E)
         # encoder_out = encoder_out.permute(1,0,2)
@@ -164,15 +163,24 @@ class TokenBoxEmbeddingModel(nn.Module):
             
         x1, x2 = TokenBoxEmbeddingModel.split_dim(box_embedding_vector)
 
-        if epoch > 10: 
-            self.box_embedding_model.visual_shape_color_embedding(color_idx[0], shape_idx[0], x1[0], x2[0], epoch, i, label[0][0])
+        if epoch > 400: 
+            self.box_embedding_model.visual_shape_color_embedding(features[0][0], features[1][0], x1[0], x2[0], epoch, i, label[0])
             
         # self.box_embedding_model.vis_all()
-        pos_prob_color, neg_prob_color = self.box_embedding_model((x1, x2, color_idx))
-        pos_prob_shape, neg_prob_shape = self.box_embedding_model((x1, x2, shape_idx))
+        pos_probs = []
+        neg_probs = []
+
+        for feature in features:    
+            pos_prob, neg_prob = self.box_embedding_model((x1, x2, feature))
+            pos_probs.append(pos_prob)
+            neg_probs.append(neg_prob)
+        pos_probs = torch.stack(pos_probs, dim=1)
+        pos_probs = torch.mean(pos_probs, dim=1)
+        neg_probs = torch.stack(neg_probs, dim=1)
+        neg_probs = torch.mean(neg_probs, dim=1)
         mi_loss = self.box_embedding_model.get_mi_loss()
 
-        return pos_prob_color, neg_prob_color, pos_prob_shape, neg_prob_shape, mi_loss       
+        return pos_probs, neg_probs, mi_loss       
     
     def get_embedding(self, x):
         src_padding_mask = TransformerEncoder.create_pad_mask(x.clone().detach())

@@ -18,11 +18,11 @@ config_file = '/lustre/S/gaomj/bachelor/BoxEmbedding-Application/POE/config/mode
 SEED = 20210628
 
 class torch_model(nn.Module):
-    def __init__(self, vocab_size, device, config=config_file, feature_size=8):
+    def __init__(self, vocab_size, device, features, config=config_file):
         super(torch_model, self).__init__()
         self.config = config
         self.device = device
-        self.feature_size = feature_size
+        self.features = features
         
         with open(config) as f:
             cfg = yaml.safe_load(f)
@@ -83,7 +83,7 @@ class torch_model(nn.Module):
             min_lower_scale, min_higher_scale = 0.0, 0.001
             delta_lower_scale, delta_higher_scale = 10.0, 10.5
         elif self.measure == 'uniform':
-            min_lower_scale, min_higher_scale = -1, 10
+            min_lower_scale, min_higher_scale = -1, 15
             delta_lower_scale, delta_higher_scale = 0.1, 2
         else:
             raise ValueError("Expected either exp or uniform but received", self.measure)
@@ -98,15 +98,37 @@ class torch_model(nn.Module):
             # random init word embedding
             self.min_embed = nn.Embedding(self.vocab_size, self.embed_dim)
             self.delta_embed = nn.Embedding(self.vocab_size, self.embed_dim)
-            self.min_feature_embed = nn.Embedding(self.feature_size, self.embed_dim)
-            self.min_feature_embed.weight = Parameter(torch.tensor([[1.0, 1.0], [1.0, 4.0], [1.0, 8.0], \
-                                                          [1.1, 0.9], [3.1, 0.9], [5.1, 0.9], [7.1, 0.9], [9.1, 0.9]]), requires_grad=False)
-            self.delta_feature_embed = nn.Embedding(self.feature_size, self.embed_dim)
-            self.delta_feature_embed.weight = Parameter(torch.tensor([[10.0, 2.0], [10.0, 2.0], [10.0, 2.0], \
-                                                            [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5]]), requires_grad=False)
+            
+            min_feature_embed, delta_feature_embed = self.gen_freeze_embeddings(feature_array=self.features, l = 12.0)
+            self.min_feature_embed = nn.Embedding(sum(self.features), self.embed_dim)
+            # self.min_feature_embed.weight = Parameter(torch.tensor([[1.0, 1.0], [1.0, 4.0], [1.0, 8.0], \
+            #                                               [1.0, 1.0], [3.0, 1.0], [5.0, 1.0], [7.0, 1.0], [9.0, 1.0]]), requires_grad=False)
+            self.min_feature_embed.weight = Parameter(min_feature_embed, requires_grad=False)
+            self.delta_feature_embed = nn.Embedding(sum(self.features), self.embed_dim)
+            # self.delta_feature_embed.weight = Parameter(torch.tensor([[10.0, 2.0], [10.0, 2.0], [10.0, 2.0], \
+            #                                                 [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5], [1.5, 10.5]]), requires_grad=False)
+            self.delta_feature_embed.weight = Parameter(delta_feature_embed, requires_grad=False)
         else:
             raise NotImplementedError("Not Implemented Embedding Method.")
         
+    def gen_freeze_embeddings(self, feature_array, l=12.0):
+
+        embed_dim = len(feature_array)
+        feature_size = sum(feature_array)
+        min_embed = torch.zeros(feature_size, embed_dim)
+        
+        for i, e in enumerate(feature_array):
+            w = l / e
+            for j in range(e):
+                min_embed[j + sum(feature_array[:i]), i] = j * w
+        
+        delta_embed = torch.zeros(feature_size, embed_dim).fill_(l + 0.1)
+        for i, e in enumerate(feature_array):
+            w = l / e
+            for j in range(e):
+                delta_embed[j + sum(feature_array[:i]), i] = w
+        return min_embed, delta_embed
+    
     def get_x_embeddings(self, x1, x2):
         min_embed_mean = (self.min_lower_scale + self.min_higher_scale) / 2
         min_embed_var = self.min_higher_scale - min_embed_mean

@@ -6,14 +6,16 @@ class OperatorDataset(Dataset):
         super().__init__()
         token1s = []
         token2s = []
-        op1s = []
-        op2s = []
+        all_ops = []
         with open(file_path, 'r') as f:
             for line in f.readlines():
                 line = line.replace('\n', '')
                 line_arr = line.split(',')
-                op1s.append(int(line_arr[1]))
-                op2s.append(int(line_arr[2]))
+                ops = []
+                for i in range(1, 13):
+                    ops.append(int(line_arr[i]))
+                all_ops.append(ops)
+               
                 token1_arr = line_arr[0].split(' ')
                 token1_line_res = []
                 for e in token1_arr:
@@ -24,11 +26,11 @@ class OperatorDataset(Dataset):
                     token2_line_res.append(int(e))
                 token1s.append(token1_line_res)
                 token2s.append(token2_line_res)
-        self.op1s, self.op2s, self.token1s, self.token2s = \
-            op1s, op2s, token1s, token2s
+        self.all_ops, self.token1s, self.token2s = \
+            all_ops, token1s, token2s
     
     def __len__(self):
-        return len(self.op1s)
+        return 150
     
     def __getitem__(self, index):
-        return np.asarray(self.token1s[index]), np.asarray(self.token2s[index]), self.op1s[index], self.op2s[index]
+        return np.asarray(self.token1s[index]), np.asarray(self.token2s[index]), np.asarray(self.all_ops[index])

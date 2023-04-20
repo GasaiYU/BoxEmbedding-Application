@@ -16,17 +16,39 @@ from torch.utils.data import DataLoader
 
 from torch.nn.parameter import Parameter
 
+import json
+
 TOKEN_PATH = '../config/token_config/token.txt'
 TOKEN_INFO_PATH = '../config/token_config/token_info.txt'
-OP_PATH = '../config/token_config/op.txt'
+OP_PATH = '../config/token_config/multi_op.txt'
 
 BATCH_SIZE = 15
-TOKEN_LEN = 27
-EMBED_DIM = 4
-FINAL_EMBED_DIM = 4
-LEN_PROG = 2
-DSL_NUM=34
-FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
+TOKEN_LEN = 35
+EMBED_DIM = 24
+
+
+DSL_NUM = [9, 36, 9, 36, 9, 36, 9, 36, 9, 36, 9, 25]
+LEN_PROG = len(DSL_NUM)
+LINE_COLOR_ARR = ['NULL' ,'RED', "BLUE", 'GREEN', 'PURPLE', 'BLACK']
+BOLD = ['BOLD_NULL' ,'THIN', 'THICK']
+
+def gen_feature_dict():
+    FEATURE_DICT = {'Circle':0, 'Rectangle':1, 'Triangle':2, 'RED':3, "BLUE":4, 'GREEN':5, 'PURPLE':6, 'BLACK':7}
+    for i, e in enumerate(LINE_COLOR_ARR):
+        FEATURE_DICT[f'CIRCLE_LINE_{e}'] = 8 + i
+        
+    for i, e in enumerate(BOLD):
+        FEATURE_DICT[f'CIRCLE_LINE_{e}'] = 14 + i
+    
+    for i in range(4):
+        for j, e in enumerate(LINE_COLOR_ARR):
+            FEATURE_DICT[f'LINE{i+1}_{e}'] = 17 + i * 6 + j
+    
+    for i in range(4):
+        for j, e in enumerate(BOLD):
+            FEATURE_DICT[f'LINE{i+1}_{e}'] = 41 + i * 3 + j
+
+    return FEATURE_DICT
 
 def train_loop(embed_model, op_model, dataloader, epoch_num, device):
     op_model.train()
@@ -37,23 +59,37 @@ def train_loop(embed_model, op_model, dataloader, epoch_num, device):
             parameter.requries_grad = False
         else:
             parameter.requries_grad = True
-    optimizer = Adam(op_model.parameters(), lr=1e-2)
+    optimizer = Adam(op_model.parameters(), lr=1e-3)
     loss_fn = nn.MSELoss()
 
     for epoch in range(epoch_num):
-        for i, batch in enumerate(dataloader):
-            token1, token2, op1, op2 = batch
+        for c, batch in enumerate(dataloader):
+            token1, token2, ops = batch
+            # ops = ops[:, :3]
             with torch.no_grad():
                 src_embeddings = embed_model.get_embedding(token1)
                 tgt_embeddings = embed_model.get_embedding(token2)
                 
-            masks = torch.zeros(LEN_PROG, BATCH_SIZE, DSL_NUM)
-            
-            for j in range(len(op1)):
-                masks[0, j, op1[j]] = 1
-                
-            for j in range(len(op2)):
-                masks[1, j, op2[j]] = 1
+            masks = torch.zeros(LEN_PROG, BATCH_SIZE, max(DSL_NUM))
+    
+            sum_dsl_num = []
+            for i in range(len(DSL_NUM)):
+                sum_dsl_num.append(sum(DSL_NUM[:i]))
+               
+            for i in range(ops.shape[0]):
+                for j in range(ops.shape[1]):
+                    op = ops[i][j]
+                    for k in range(len(sum_dsl_num)):
+                        if op < sum_dsl_num[k]:
+                            ops[i][j] -= sum_dsl_num[k-1]
+                            break
+                    if ops[i][j] > max(DSL_NUM):
+                        ops[i][j] -= sum_dsl_num[-1]
+               
+            for i in range(ops.shape[0]):
+                for j in range(ops.shape[1]):
+                    masks[j, i, ops[i][j]] = 1.0
+
             predicted = op_model(src_embeddings, masks)
             
             loss = loss_fn(predicted, tgt_embeddings)
@@ -61,17 +97,19 @@ def train_loop(embed_model, op_model, dataloader, epoch_num, device):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
             running_loss += loss.item()
-            if i % 8 == 7:
-                print(f"[Train] Loss {running_loss/8} Epoch {epoch} Batch {i}")
-                with open('logs/op_train.txt', 'a') as f:
-                    f.write(f"[Train] Loss {running_loss/8} Epoch {epoch} Batch {i}\n")
+
+            if True:
+                print(f"[Train] Loss {running_loss/1} Epoch {epoch} Batch {c}")
+                # with open('logs/op_train.txt', 'a') as f:
+                #     f.write(f"[Train] Loss {running_loss/1} Epoch {epoch} Batch {c}\n")
                 running_loss = 0
     
-    torch.save(op_model.state_dict(), 'fixed_op_model.pth.tar')
+    torch.save(op_model.state_dict(), '3_multi_fixed_op_model.pth.tar')
  
  
-def model_infer(embed_model, dataloader, epoch_num, device):
+def model_infer(embed_model, dataloader, epoch_num, identity_idx, device):
     embed_model.eval()
     loss_fn = nn.MSELoss()
     running_loss = last_loss = 0
@@ -79,8 +117,8 @@ def model_infer(embed_model, dataloader, epoch_num, device):
     total_top1_acc = 0
     total_top3_acc = 0
     for i, batch in enumerate(dataloader):
-        op_model = MyOperator(LEN_PROG, DSL_NUM, FINAL_EMBED_DIM, BATCH_SIZE)
-        op_model.load_state_dict(torch.load('op_model.pth.tar'))
+        op_model = MyOperator(LEN_PROG, DSL_NUM, EMBED_DIM, BATCH_SIZE, identity_idx)
+        op_model.load_state_dict(torch.load('multi_fixed_op_model.pth.tar'))
         optimizer = Adam(op_model.parameters(), lr=1e-2)
         op_model.train() 
         tau = 2.0
@@ -93,7 +131,8 @@ def model_infer(embed_model, dataloader, epoch_num, device):
                 op_model_t.requires_grad = False
         loss_arr = []
         for epoch in range(epoch_num):
-            token1, token2, op1, op2 = batch
+            token1, token2, ops = batch
+            # ops = ops[:, :3]
             with torch.no_grad():
                 src_embeddings = embed_model.get_embedding(token1)
                 tgt_embeddings = embed_model.get_embedding(token2)
@@ -123,29 +162,35 @@ def model_infer(embed_model, dataloader, epoch_num, device):
             else:
                 top1_acc = 0
                 top3_acc = 0
-                op1_acc = 0
-                op2_acc = 0
+                top5_acc = 0
                 my_sorted, indices = op_model.masks.sort(dim=2, descending=True)
-
-                for i in range(indices.shape[1]):
-                    if op1[i] in indices[0][i][:1]:
-                        top1_acc += 1
-                        op1_acc += 1
-                for i in range(indices.shape[1]):
-                    if op2[i] in indices[1][i][:1]:
-                        top1_acc += 1
-                        op2_acc += 1
-                        
-                for i in range(indices.shape[1]):
-                    if op1[i] in indices[0][i][:3]:
-                        top3_acc += 1
-                for i in range(indices.shape[1]):
-                    if op2[i] in indices[1][i][:3]:
-                        top3_acc += 1
-  
-                top1_acc = top1_acc / (len(indices[0]) + len(indices[1]))
-                top3_acc = top3_acc / (len(indices[0]) + len(indices[1]))
-                print(f'[INFER] Batch {i} top1_acc {top1_acc} top3_acc {top3_acc} OP1 ACC: {op1_acc/indices.shape[1]} OP2 ACC: {op2_acc/indices.shape[1]}')    
+                sum_dsl_num = []
+                for i in range(len(DSL_NUM)):
+                    sum_dsl_num.append(sum(DSL_NUM[:i]))
+                
+                for i in range(ops.shape[0]):
+                    for j in range(ops.shape[1]):
+                        op = ops[i][j]
+                        for k in range(len(sum_dsl_num)):
+                            if op < sum_dsl_num[k]:
+                                ops[i][j] -= sum_dsl_num[k-1]
+                                break
+                        if ops[i][j] > max(DSL_NUM):
+                            ops[i][j] -= sum_dsl_num[-1]
+                           
+                for j in range(indices.shape[0]):
+                    for k in range(indices.shape[1]):
+                        if ops[k][j] in indices[j][k][:1]:
+                            top1_acc += 1
+                        if ops[k][j] in indices[j][k][:3]:
+                            top3_acc += 1   
+                        if ops[k][j] in indices[j][k][:5]:
+                            top5_acc += 1       
+                
+                top1_acc = top1_acc / (indices.shape[0] * indices.shape[1])
+                top3_acc = top3_acc / (indices.shape[0] * indices.shape[1])
+                top5_acc = top5_acc / (indices.shape[0] * indices.shape[1])
+                print(f'[INFER] Batch {i} top1_acc {top1_acc} top3_acc {top3_acc} top5_acc {top5_acc}')    
         total_top1_acc += top1_acc
         total_top3_acc += top3_acc
     print(f'[INFER] Total top1_acc: {total_top1_acc/8} Total top3_acc: {total_top3_acc/8}')    
@@ -154,19 +199,33 @@ def model_infer(embed_model, dataloader, epoch_num, device):
             
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_model = TransformerEncoder(num_tokens=35, dim_model=EMBED_DIM, num_heads=1, num_encoder_layers=1, \
+    FEATURE_DICT = gen_feature_dict()
+    
+    with open('../config/token_config/multi_op_dict.json') as f:
+        op_dict = json.load(f)
+
+    identity_idx = []
+    for e in list(op_dict.keys()):
+        e_arr = e.split(' ')
+        if e_arr[0] == e_arr[1]:
+            identity_idx.append(op_dict[e])
+            
+    encoder_model = TransformerEncoder(num_tokens=100, dim_model=EMBED_DIM, num_heads=1, num_encoder_layers=1, \
                         dropout_p=0)
-    box_embedding_model = torch_model(10, device, feature_size=len(FEATURE_DICT.keys()))
+    features = [3,5,6,3,6,6,6,6,3,3,3,3]
+    box_embedding_model = torch_model(10, device, features=features)
     embed_model = TokenBoxEmbeddingModel(encoder_model, box_embedding_model, device, \
                                    token_len=TOKEN_LEN, embed_dim=EMBED_DIM)
-    embed_model.load_state_dict(torch.load('program_transform.pth.tar'))
+    embed_model.load_state_dict(torch.load('multi_program_transform.pth.tar'))
     
     
     op_dataset = OperatorDataset(OP_PATH)
-    dataloader = DataLoader(op_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
-    op_model = MyOperator(LEN_PROG, DSL_NUM, FINAL_EMBED_DIM, BATCH_SIZE)
-    op_model.load_state_dict(torch.load('op_model.pth.tar'))
-    # train_loop(embed_model, op_model, dataloader, 2000, device)
+    dataloader = DataLoader(op_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True)
     
-    model_infer(embed_model, dataloader, 20000, device)
+
+    op_model = MyOperator(LEN_PROG, DSL_NUM, EMBED_DIM, BATCH_SIZE, identity_idx)
+    # op_model.load_state_dict(torch.load('multi_fixed_op_model.pth.tar'))
+    # train_loop(embed_model, op_model, dataloader, 2000, device)
+
+    model_infer(embed_model, dataloader, 20000, identity_idx, device)
     
