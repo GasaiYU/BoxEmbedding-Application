@@ -58,7 +58,7 @@ class MyOperator(nn.Module):
             for j in range(self.dsl_num[i]):
                 # breakpoint()
                 layer_res.append(self.layers[i][j](x.clone()))
-
+            
             for j in range(max(self.dsl_num) - len(layer_res)):
                 layer_res.append(torch.zeros(self.batch_size, self.embed_dim, requires_grad=True))
             layer_res = torch.stack(layer_res, dim=1)
@@ -68,10 +68,12 @@ class MyOperator(nn.Module):
             # else:
             #     layer_res[:, 9:, :] = 0.0
 
-            mask = masks[i].unsqueeze(1)
+            # mask = masks[i].unsqueeze(1)
             if not flag:
+                mask = masks[i].unsqueeze(1) 
                 mask = F.softmax(mask, dim=2)
-
+            else:
+                mask = masks[i].unsqueeze(1)
             x = (mask @ layer_res).squeeze(1)
-            
+
         return x
